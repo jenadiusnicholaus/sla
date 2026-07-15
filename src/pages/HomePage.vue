@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import Header from '../components/Header.vue'
 import Hero from '../components/HeroBillionDollar.vue'
+import ImageGallery from '../components/ImageGallery.vue'
 import About from '../components/About.vue'
 import BrandValues from '../components/BrandValues.vue'
 import Services from '../components/Services.vue'
@@ -17,6 +18,7 @@ const showDonateModal = ref<boolean>(false)
   <div class="sla-website">
     <Header @open-donate="showDonateModal = true" />
     <Hero @open-donate="showDonateModal = true" />
+    <ImageGallery />
     <About />
     <BrandValues />
     <Services />

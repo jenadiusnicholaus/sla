@@ -2,6 +2,11 @@
   <section id="home" class="hero">
     <div class="hero-stripe top-stripe"></div>
     <div class="hero-content">
+      <img
+        src="/images/STREET_DIGITAL_LABS_AFRICA_WITH_WORD.png"
+        alt="Street Digital Labs Africa Logo"
+        class="hero-logo"
+      />
       <p class="hero-eyebrow">Street Digital Labs Africa</p>
       <h2 class="hero-title">Inclusion for All!</h2>
       <p class="hero-subtitle">
@@ -61,6 +66,15 @@
   margin: 0 auto;
   position: relative;
   z-index: 1;
+}
+
+.hero-logo {
+  max-width: 400px;
+  height: auto;
+  margin-bottom: 2rem;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .hero-eyebrow {

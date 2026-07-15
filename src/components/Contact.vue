@@ -1,75 +1,124 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+
+interface ContactInfo {
+  icon: string
+  label: string
+  value: string
+}
+
+interface FormState {
+  name: string
+  email: string
+  subject: string
+  message: string
+}
+
+const contactItems: ContactInfo[] = [
+  { icon: '📍', label: 'Address', value: '123 Innovation Drive, Yaba, Lagos, Nigeria' },
+  { icon: '📞', label: 'Phone',   value: '+234 800 123 4567' },
+  { icon: '✉️', label: 'Email',   value: 'info@streetlabs.africa' },
+  { icon: '🌐', label: 'Website', value: 'www.streetlabs.africa' },
+]
+
+const form = ref<FormState>({ name: '', email: '', subject: '', message: '' })
+const isSending   = ref<boolean>(false)
+const isSent      = ref<boolean>(false)
+const sendError   = ref<string>('')
+
+const sendMessage = async (): Promise<void> => {
+  sendError.value = ''
+  if (!form.value.name || !form.value.email || !form.value.message) {
+    sendError.value = 'Please fill in all required fields.'
+    return
+  }
+  isSending.value = true
+  // TODO: connect to a real mail API (e.g. EmailJS / Brevo / SendGrid)
+  await new Promise<void>((resolve) => setTimeout(resolve, 1500))
+  isSending.value = false
+  isSent.value = true
+}
+</script>
+
 <template>
   <section id="contact" class="contact">
     <div class="container">
+      <!-- Header -->
       <div class="section-header">
+        <span class="eyebrow">Get In Touch</span>
         <h2 class="section-title">Contact Us</h2>
         <div class="title-bar"></div>
-        <p class="section-description">
-          Ready to join the digital revolution? Get in touch with Street Labs
-          today.
-        </p>
+        <p class="section-desc">Ready to join the digital revolution? We'd love to hear from you.</p>
       </div>
+
       <div class="contact-grid">
+        <!-- Info panel -->
         <div class="contact-info">
-          <div class="contact-item">
-            <div class="contact-icon">📍</div>
-            <div>
-              <strong>Address</strong>
-              <p>123 Innovation Drive, Yaba, Lagos, Nigeria</p>
+          <h3 class="info-heading">Let's Connect</h3>
+          <p class="info-sub">Reach out through any of the channels below and our team will respond within 24 hours.</p>
+
+          <div class="info-items">
+            <div
+              v-for="item in contactItems"
+              :key="item.label"
+              class="info-item"
+            >
+              <div class="info-icon">{{ item.icon }}</div>
+              <div>
+                <strong>{{ item.label }}</strong>
+                <p>{{ item.value }}</p>
+              </div>
             </div>
           </div>
-          <div class="contact-item">
-            <div class="contact-icon">📞</div>
-            <div>
-              <strong>Phone</strong>
-              <p>+234 800 123 4567</p>
-            </div>
-          </div>
-          <div class="contact-item">
-            <div class="contact-icon">✉️</div>
-            <div>
-              <strong>Email</strong>
-              <p>info@streetlabs.africa</p>
-            </div>
-          </div>
-          <div class="contact-item">
-            <div class="contact-icon">🌐</div>
-            <div>
-              <strong>Website</strong>
-              <p>www.streetlabs.africa</p>
-            </div>
-          </div>
-          <div class="social-links">
-            <a class="social-btn" href="#">f</a>
-            <a class="social-btn" href="#">𝕏</a>
-            <a class="social-btn" href="#">in</a>
-            <a class="social-btn" href="#">▶</a>
+
+          <!-- Socials -->
+          <div class="social-row">
+            <a v-for="s in ['f', '𝕏', 'in', '▶']" :key="s" href="#" class="social-btn" :aria-label="s">{{ s }}</a>
           </div>
           <p class="social-handle">@streetlabsafrica</p>
+
+          <!-- Decorative stripe -->
+          <div class="info-stripe">
+            <div class="stripe green"></div>
+            <div class="stripe white"></div>
+            <div class="stripe orange"></div>
+          </div>
         </div>
+
+        <!-- Form -->
         <div class="contact-form">
-          <h3 class="form-title">Send a Message</h3>
-          <div class="form-group">
-            <input type="text" class="form-input" placeholder="Your Name" />
+          <template v-if="!isSent">
+            <h3 class="form-title">Send a Message</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="contact-name">Full Name *</label>
+                <input id="contact-name" v-model="form.name"   type="text"  class="form-input" placeholder="Your Name" />
+              </div>
+              <div class="form-group">
+                <label for="contact-email">Email Address *</label>
+                <input id="contact-email" v-model="form.email" type="email" class="form-input" placeholder="you@example.com" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="contact-subject">Subject</label>
+              <input id="contact-subject" v-model="form.subject" type="text" class="form-input" placeholder="How can we help?" />
+            </div>
+            <div class="form-group">
+              <label for="contact-message">Message *</label>
+              <textarea id="contact-message" v-model="form.message" class="form-input form-textarea" rows="5" placeholder="Tell us more…"></textarea>
+            </div>
+            <p v-if="sendError" class="send-error" role="alert">⚠️ {{ sendError }}</p>
+            <button class="btn-send" :disabled="isSending" @click="sendMessage">
+              <span v-if="isSending" class="spinner"></span>
+              {{ isSending ? 'Sending…' : 'Send Message →' }}
+            </button>
+          </template>
+
+          <div v-else class="sent-success">
+            <div class="sent-icon">✅</div>
+            <h3>Message Sent!</h3>
+            <p>Thank you for reaching out. We'll get back to you within 24 hours.</p>
           </div>
-          <div class="form-group">
-            <input
-              type="email"
-              class="form-input"
-              placeholder="Email Address"
-            />
-          </div>
-          <div class="form-group">
-            <input type="text" class="form-input" placeholder="Subject" />
-          </div>
-          <div class="form-group">
-            <textarea
-              class="form-input form-textarea"
-              placeholder="Your Message"
-              rows="5"
-            ></textarea>
-          </div>
-          <button class="btn-send">Send Message</button>
         </div>
       </div>
     </div>
@@ -77,180 +126,100 @@
 </template>
 
 <style scoped>
-.contact {
-  background: #ffffff;
-}
+.contact { background: white; }
+.container { max-width: 1200px; margin: 0 auto; padding: 6rem 2rem; }
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 5rem 2rem;
+.section-header { text-align: center; margin-bottom: 4rem; }
+.eyebrow {
+  display: inline-block; font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: #ff6a00; background: rgba(255,106,0,0.08);
+  border: 1px solid rgba(255,106,0,0.2);
+  padding: 0.3rem 1rem; border-radius: 50px;
+  margin-bottom: 1rem; font-family: 'Poppins', sans-serif;
 }
-
-.section-header {
-  text-align: center;
-  margin-bottom: 3rem;
-}
-
 .section-title {
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: #0a1f44;
-  margin-bottom: 0.75rem;
-  font-family: "Poppins", sans-serif;
+  font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; color: #0a1f44;
+  margin-bottom: 0.75rem; font-family: 'Poppins', sans-serif; letter-spacing: -0.02em;
 }
+.title-bar { width: 56px; height: 4px; background: linear-gradient(90deg, #ff6a00, #0a7a3d); margin: 0 auto 1.5rem; border-radius: 2px; }
+.section-desc { font-size: 1.05rem; color: #5a6a85; max-width: 600px; margin: 0 auto; line-height: 1.8; }
 
-.title-bar {
-  width: 60px;
-  height: 4px;
-  background: #ff6a00;
-  margin: 0 auto 1.5rem;
-  border-radius: 2px;
-}
+/* Grid */
+.contact-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 4rem; align-items: start; }
 
-.section-description {
-  font-size: 1.05rem;
-  color: #555;
-  max-width: 600px;
-  margin: 0 auto;
-  line-height: 1.7;
-}
-
-.contact-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.4fr;
-  gap: 4rem;
-  align-items: start;
-}
-
+/* Info panel */
 .contact-info {
-  background: #0a1f44;
-  color: white;
-  padding: 2.5rem;
-  border-radius: 14px;
+  background: linear-gradient(160deg, #0a1f44 0%, #163566 100%);
+  color: white; padding: 2.5rem; border-radius: 20px; position: relative; overflow: hidden;
 }
+.info-heading { font-size: 1.4rem; font-weight: 800; font-family: 'Poppins', sans-serif; margin-bottom: 0.5rem; }
+.info-sub { font-size: 0.88rem; opacity: 0.65; line-height: 1.7; margin-bottom: 2rem; }
 
-.contact-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.75rem;
-}
+.info-items { display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 2rem; }
+.info-item { display: flex; align-items: flex-start; gap: 1rem; }
+.info-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+.info-item strong { display: block; font-size: 0.78rem; color: #ff6a00; margin-bottom: 0.2rem; font-family: 'Poppins', sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+.info-item p { font-size: 0.9rem; opacity: 0.82; line-height: 1.5; }
 
-.contact-icon {
-  font-size: 1.4rem;
-  margin-top: 0.1rem;
-  flex-shrink: 0;
-}
-
-.contact-item strong {
-  display: block;
-  font-size: 0.85rem;
-  color: #ff6a00;
-  margin-bottom: 0.2rem;
-  font-family: "Poppins", sans-serif;
-}
-
-.contact-item p {
-  font-size: 0.95rem;
-  opacity: 0.85;
-  line-height: 1.5;
-}
-
-.social-links {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
+.social-row { display: flex; gap: 0.6rem; margin-bottom: 0.5rem; }
 .social-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: background 0.2s;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 9px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  color: white; text-decoration: none;
+  font-size: 0.85rem; font-weight: 700;
+  transition: background 0.2s, border-color 0.2s;
 }
+.social-btn:hover { background: #ff6a00; border-color: #ff6a00; }
+.social-handle { font-size: 0.82rem; opacity: 0.5; }
 
-.social-btn:hover {
-  background: #ff6a00;
-  border-color: #ff6a00;
-}
+.info-stripe { position: absolute; bottom: 0; left: 0; right: 0; display: flex; height: 4px; }
+.stripe { flex: 1; }
+.stripe.green  { background: #0a7a3d; }
+.stripe.white  { background: rgba(255,255,255,0.5); }
+.stripe.orange { background: #ff6a00; }
 
-.social-handle {
-  font-size: 0.85rem;
-  opacity: 0.7;
-  margin-top: 0.25rem;
-}
-
-.contact-form {
-  padding: 0.5rem 0;
-}
-
-.form-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0a1f44;
-  margin-bottom: 1.5rem;
-  font-family: "Poppins", sans-serif;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
+/* Form */
+.contact-form { padding: 0.5rem 0; }
+.form-title { font-size: 1.5rem; font-weight: 800; color: #0a1f44; font-family: 'Poppins', sans-serif; margin-bottom: 1.75rem; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 1rem; }
+.form-group label { font-size: 0.8rem; font-weight: 600; color: #0a1f44; font-family: 'Poppins', sans-serif; }
 .form-input {
-  width: 100%;
-  padding: 0.85rem 1rem;
-  border: 1.5px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-family: "Poppins", sans-serif;
-  color: #0a1f44;
-  transition: border-color 0.2s;
-  outline: none;
+  padding: 0.85rem 1rem; border: 1.5px solid rgba(10,31,68,0.15);
+  border-radius: 10px; font-size: 0.95rem; font-family: 'Poppins', sans-serif;
+  color: #0a1f44; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  background: white;
 }
-
-.form-input:focus {
-  border-color: #ff6a00;
-}
-
-.form-textarea {
-  resize: vertical;
-}
+.form-input:focus { border-color: #ff6a00; box-shadow: 0 0 0 3px rgba(255,106,0,0.1); }
+.form-textarea { resize: vertical; min-height: 130px; }
+.send-error { color: #dc2626; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.75rem; }
 
 .btn-send {
-  width: 100%;
-  padding: 0.9rem;
-  background: #ff6a00;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  font-family: "Poppins", sans-serif;
-  cursor: pointer;
-  transition:
-    background 0.2s,
-    transform 0.2s;
+  width: 100%; padding: 1rem;
+  background: linear-gradient(135deg, #ff6a00, #e04500);
+  color: white; border: none; border-radius: 50px; cursor: pointer;
+  font-size: 1rem; font-weight: 700; font-family: 'Poppins', sans-serif;
+  box-shadow: 0 6px 20px rgba(255,106,0,0.35);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
 }
+.btn-send:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,106,0,0.45); }
+.btn-send:disabled { opacity: 0.7; cursor: not-allowed; }
 
-.btn-send:hover {
-  background: #e05e00;
-  transform: translateY(-2px);
-}
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 768px) {
-  .contact-grid {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
+/* Success */
+.sent-success { text-align: center; padding: 3rem 1rem; }
+.sent-icon { font-size: 3rem; margin-bottom: 1rem; }
+.sent-success h3 { font-size: 1.5rem; font-weight: 800; color: #0a1f44; font-family: 'Poppins', sans-serif; margin-bottom: 0.5rem; }
+.sent-success p { color: #5a6a85; line-height: 1.7; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .contact-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+  .form-row { grid-template-columns: 1fr; }
 }
 </style>

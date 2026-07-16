@@ -139,9 +139,9 @@ const stats: Stat[] = [
   position: absolute; inset: 0; z-index: 1;
   background: linear-gradient(
     135deg,
-    rgba(4, 12, 32, 0.92) 0%,
-    rgba(6, 18, 48, 0.88) 50%,
-    rgba(10, 26, 60, 0.82) 100%
+    rgba(4, 12, 32, 0.6) 0%,
+    rgba(6, 18, 48, 0.5) 50%,
+    rgba(10, 26, 60, 0.4) 100%
   );
 }
 

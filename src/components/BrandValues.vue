@@ -54,22 +54,26 @@ useFadeUp('[data-fade-val]')
 </template>
 
 <style scoped>
-.brand-values { background: linear-gradient(180deg, #0a1f44 0%, #0f2d5c 100%); color: white; }
+.brand-values {
+  background: #f4f6fa;
+  color: #212121;
+  padding: 2rem 0;
+}
 
-.container { max-width: 1200px; margin: 0 auto; padding: 6rem 2rem; }
+.container { max-width: 1200px; margin: 0 auto; padding: 4rem 0.5rem; }
 
 .section-header { text-align: center; margin-bottom: 4rem; }
 .eyebrow {
   display: inline-block; font-size: 0.75rem; font-weight: 700;
   letter-spacing: 0.14em; text-transform: uppercase;
-  color: #ff6a00; background: rgba(255,106,0,0.12);
+  color: #ff6a00; background: rgba(255,106,0,0.1);
   border: 1px solid rgba(255,106,0,0.25);
   padding: 0.3rem 1rem; border-radius: 50px;
   margin-bottom: 1rem; font-family: 'Poppins', sans-serif;
 }
 .section-title {
   font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800;
-  color: #fff; margin-bottom: 0.75rem;
+  color: #0a1f44; margin-bottom: 0.75rem;
   font-family: 'Poppins', sans-serif; letter-spacing: -0.02em;
 }
 .title-bar {
@@ -77,7 +81,11 @@ useFadeUp('[data-fade-val]')
   background: linear-gradient(90deg, #ff6a00, #0a7a3d);
   margin: 0 auto 1.5rem; border-radius: 2px;
 }
-.section-desc { font-size: 1.05rem; color: rgba(255,255,255,0.6); max-width: 600px; margin: 0 auto; line-height: 1.8; }
+.section-desc {
+  font-size: 1.05rem;
+  color: rgba(10, 31, 68, 0.65);
+  max-width: 600px; margin: 0 auto; line-height: 1.8;
+}
 
 /* Grid */
 .values-grid {
@@ -88,17 +96,18 @@ useFadeUp('[data-fade-val]')
 
 /* Card */
 .value-card {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: #ffffff;
+  border: 1px solid rgba(10, 31, 68, 0.08);
   border-radius: 20px; padding: 2rem 1.75rem;
   text-align: center; position: relative; overflow: hidden;
   transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
   display: flex; flex-direction: column; align-items: center; gap: 0.85rem;
+  box-shadow: 0 2px 12px rgba(10, 31, 68, 0.06);
 }
 .value-card:hover {
-  background: rgba(255,255,255,0.09);
+  background: #fff;
   transform: translateY(-6px);
-  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  box-shadow: 0 20px 50px rgba(10, 31, 68, 0.12);
 }
 .value-accent {
   position: absolute; bottom: 0; left: 0; right: 0;
@@ -116,7 +125,7 @@ useFadeUp('[data-fade-val]')
 .value-icon { font-size: 1.75rem; }
 
 .value-title { font-size: 1.1rem; font-weight: 700; font-family: 'Poppins', sans-serif; }
-.value-desc  { font-size: 0.88rem; color: rgba(255,255,255,0.62); line-height: 1.7; }
+.value-desc  { font-size: 0.88rem; color: rgba(10, 31, 68, 0.6); line-height: 1.7; }
 
 /* Fade-up */
 [data-fade-val] {
@@ -129,3 +138,4 @@ useFadeUp('[data-fade-val]')
   .values-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
+

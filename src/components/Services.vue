@@ -82,7 +82,7 @@ useFadeUp('[data-fade-svc]')
 <style scoped>
 .services { background: #f4f7fb; }
 
-.container { max-width: 1200px; margin: 0 auto; padding: 6rem 2rem; }
+.container { max-width: 1200px; margin: 0 auto; padding: 3rem 0.5rem; }
 
 .section-header { text-align: center; margin-bottom: 4rem; }
 .eyebrow {

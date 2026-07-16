@@ -74,12 +74,14 @@ const navLinks: NavLink[] = [
 
         <!-- Right actions -->
         <div class="header-right">
-          <button class="donate-btn" @click="emit('open-donate')" id="header-donate-btn">
-            <svg class="heart-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"/>
-            </svg>
-            Donate
-          </button>
+          <div class="donate-border-wrap">
+            <button class="donate-btn" @click="emit('open-donate')" id="header-donate-btn">
+              <svg class="heart-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"/>
+              </svg>
+              Donate
+            </button>
+          </div>
           <button
             class="menu-toggle"
             :class="{ open: isMenuOpen }"
@@ -103,13 +105,15 @@ const navLinks: NavLink[] = [
             class="drawer-link"
             @click="isMenuOpen = false"
           >{{ link.label }}</a>
-          <button
-            class="donate-btn donate-btn-full"
-            @click="() => { isMenuOpen = false; emit('open-donate') }"
-            id="mobile-donate-btn"
-          >
-            ❤️ Donate Now
-          </button>
+          <div class="donate-border-wrap donate-border-full">
+            <button
+              class="donate-btn donate-btn-full"
+              @click="() => { isMenuOpen = false; emit('open-donate') }"
+              id="mobile-donate-btn"
+            >
+              ❤️ Donate Now
+            </button>
+          </div>
         </div>
       </transition>
     </header>
@@ -163,7 +167,7 @@ const navLinks: NavLink[] = [
   z-index: 1000;
 }
 .header {
-  background: rgba(255, 255, 255, 0.96);
+  background: transparent;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-bottom: 1.5px solid rgba(10, 31, 68, 0.08);
@@ -172,6 +176,13 @@ const navLinks: NavLink[] = [
 .header.scrolled {
   background: rgba(255, 255, 255, 0.99);
   box-shadow: 0 4px 40px rgba(10, 31, 68, 0.12);
+}
+.header.scrolled .nav-link {
+  color: rgba(10, 31, 68, 0.9);
+}
+.header.scrolled .nav-link:hover {
+  color: #0a1f44;
+  background: rgba(10, 31, 68, 0.05);
 }
 
 /* ── Container ───────────────────────────────────────── */
@@ -187,32 +198,46 @@ const navLinks: NavLink[] = [
 
 /* ── Logo ────────────────────────────────────────────── */
 .logo {
-  display: flex; align-items: center;
-  gap: 0.9rem; text-decoration: none; flex-shrink: 0;
-}
-.logo-img-wrap {
-  width: 68px; height: 68px;
-  background: linear-gradient(135deg, rgba(255,106,0,0.08) 0%, rgba(10,31,68,0.04) 100%);
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  border: 1.5px solid rgba(255, 106, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+  flex-shrink: 0;
+  background: #ffffff;
+  padding: 0.4rem 0.9rem 0.4rem 0.4rem;
+  border-radius: 50px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.08);
+  border: 1px solid rgba(255,255,255,0.9);
   transition: box-shadow 0.25s, transform 0.25s;
 }
-.logo:hover .logo-img-wrap {
-  box-shadow: 0 6px 24px rgba(255, 106, 0, 0.22);
+.logo:hover {
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
   transform: translateY(-1px);
 }
-.header-logo { width: 56px; height: 56px; object-fit: contain; }
+.logo-img-wrap {
+  width: 46px; height: 46px;
+  background: linear-gradient(135deg, #fff7f0 0%, #fff 100%);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(255, 106, 0, 0.2);
+  flex-shrink: 0;
+}
+.header-logo { width: 34px; height: 34px; object-fit: contain; }
 
-.logo-text { display: flex; flex-direction: column; line-height: 1.2; }
+.logo-text {
+  display: flex; flex-direction: column;
+  line-height: 1.15;
+  border-left: 1.5px solid rgba(10,31,68,0.1);
+  padding-left: 0.65rem;
+}
 .logo-name {
-  font-size: 1.1rem; font-weight: 800; color: #0a1f44;
-  font-family: 'Poppins', sans-serif; letter-spacing: -0.02em;
+  font-size: 0.95rem; font-weight: 800; color: #0a1f44;
+  font-family: 'Poppins', sans-serif; letter-spacing: -0.01em;
   white-space: nowrap;
 }
 .logo-sub {
-  font-size: 0.68rem; font-weight: 500; color: #ff6a00;
-  font-family: 'Poppins', sans-serif; letter-spacing: 0.06em;
+  font-size: 0.58rem; font-weight: 600; color: #ff6a00;
+  font-family: 'Poppins', sans-serif; letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -223,18 +248,37 @@ const navLinks: NavLink[] = [
 }
 .nav-link {
   text-decoration: none;
-  color: rgba(10, 31, 68, 0.6);
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 500; font-size: 0.875rem;
   font-family: 'Poppins', sans-serif;
   padding: 0.5rem 1rem; border-radius: 8px;
   transition: color 0.2s, background 0.2s;
   white-space: nowrap;
 }
-.nav-link:hover { color: #0a1f44; background: rgba(10, 31, 68, 0.05); }
+.nav-link:hover { color: #ffffff; background: rgba(255, 255, 255, 0.1); }
 
 /* ── Right Actions ───────────────────────────────────── */
 .header-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
 
+/* ── Animated border donate button ───────────────────── */
+.donate-border-wrap {
+  position: relative;
+  border-radius: 50px;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    #ff6a00, #ffffff, #0a7a3d, #ffffff, #ff6a00
+  );
+  animation: spin-border 2.5s linear infinite;
+}
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes spin-border {
+  to { --angle: 360deg; }
+}
 .donate-btn {
   display: inline-flex; align-items: center; gap: 0.5rem;
   background: linear-gradient(135deg, #ff6a00 0%, #e84a00 100%);
@@ -242,9 +286,11 @@ const navLinks: NavLink[] = [
   font-family: 'Poppins', sans-serif;
   padding: 0.65rem 1.6rem; border-radius: 50px;
   border: none; cursor: pointer;
+  position: relative; z-index: 1;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 20px rgba(255, 106, 0, 0.4);
   white-space: nowrap; letter-spacing: 0.01em;
+  width: 100%;
 }
 .donate-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255, 106, 0, 0.5); }
 .donate-btn-full {

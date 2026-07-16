@@ -86,7 +86,7 @@ useFadeUp('[data-fade-about]')
 <style scoped>
 .about { background: #ffffff; }
 
-.container { max-width: 1200px; margin: 0 auto; padding: 6rem 2rem; }
+.container { max-width: 1200px; margin: 0 auto; padding: 3rem 0.5rem; }
 
 /* Eyebrow + title */
 .about-header { text-align: center; margin-bottom: 4rem; }

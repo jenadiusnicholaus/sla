@@ -1,29 +1,41 @@
-# sla
+# Street Labs Africa — Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+Vue 3 site for [streetlabsafrica.org](https://streetlabsafrica.org/) plus the **Smart QR / CMS backoffice**.
 
-## Recommended IDE Setup
+## Run with the Django API
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+```bash
+# Terminal 1 — backend
+cd ../backend
+source .venv/bin/activate
+python manage.py runserver
 
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+# Terminal 2 — frontend
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
 ```
 
-### Compile and Minify for Production
+| Surface | URL |
+|---------|-----|
+| Public site | http://localhost:5173/ |
+| Smart Hub demo | http://localhost:5173/qr/A91KXT |
+| Employee profile | http://localhost:5173/profiles/hamood |
+| Backoffice | http://localhost:5173/backoffice/login |
 
-```sh
-npm run build
+**Backoffice login:** `admin` / `admin123!`
+
+## Platform routes
+
 ```
+/                     Website homepage
+/profiles/{username}  Employee digital identity
+/projects/{slug}      Project page
+/qr/{code}            Smart Hub (dynamic QR destination)
+/backoffice           CMS · QR builder · Profiles · Analytics
+```
+
+Every physical QR should encode:
+
+`https://streetlabsafrica.org/qr/{CODE}`
+
+The backend resolves the live destination (hub actions, profile, project, event, URL) without reprinting codes.

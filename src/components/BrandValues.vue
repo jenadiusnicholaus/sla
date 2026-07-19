@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useFadeUp } from '@/composables/useFadeUp'
 
 interface Value {
@@ -8,13 +9,19 @@ interface Value {
   color: string
 }
 
-const values: Value[] = [
-  { emoji: '🤲', title: 'Inclusion',   description: 'Equal digital opportunities for every African, regardless of background.',    color: '#ff6a00' },
-  { emoji: '💡', title: 'Innovation',  description: 'We foster creativity and build tech solutions for real community challenges.', color: '#0a7a3d' },
-  { emoji: '🎓', title: 'Empowerment', description: 'Equipping individuals with the skills, mindset, and network for success.',      color: '#ff6a00' },
-  { emoji: '🤝', title: 'Integrity',   description: 'Acting with honesty, transparency, and deep respect for all stakeholders.',   color: '#0a7a3d' },
-  { emoji: '🌐', title: 'Community',   description: 'Building lasting networks that generate sustainable, measurable impact.',      color: '#ff6a00' },
+const props = defineProps<{
+  values?: Value[]
+}>()
+
+const DEFAULT_VALUES: Value[] = [
+  { emoji: '🤲', title: 'Inclusion', description: 'Equal digital opportunities for every African, regardless of background.', color: '#ff6a00' },
+  { emoji: '💡', title: 'Innovation', description: 'We foster creativity and build tech solutions for real community challenges.', color: '#0a7a3d' },
+  { emoji: '🎓', title: 'Empowerment', description: 'Equipping individuals with the skills, mindset, and network for success.', color: '#ff6a00' },
+  { emoji: '🤝', title: 'Integrity', description: 'Acting with honesty, transparency, and deep respect for all stakeholders.', color: '#0a7a3d' },
+  { emoji: '🌐', title: 'Community', description: 'Building lasting networks that generate sustainable, measurable impact.', color: '#ff6a00' },
 ]
+
+const displayValues = computed(() => (props.values?.length ? props.values : DEFAULT_VALUES))
 
 useFadeUp('[data-fade-val]')
 </script>
@@ -22,7 +29,6 @@ useFadeUp('[data-fade-val]')
 <template>
   <section id="values" class="brand-values">
     <div class="container">
-      <!-- Header -->
       <div class="section-header" data-fade-val>
         <span class="eyebrow">Our Foundation</span>
         <h2 class="section-title">Brand Values</h2>
@@ -30,10 +36,9 @@ useFadeUp('[data-fade-val]')
         <p class="section-desc">The principles that guide every decision, program, and partnership at Street Digital Labs Africa.</p>
       </div>
 
-      <!-- Values grid -->
       <div class="values-grid">
         <div
-          v-for="v in values"
+          v-for="v in displayValues"
           :key="v.title"
           class="value-card"
           data-fade-val

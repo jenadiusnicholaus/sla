@@ -1,61 +1,140 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Stat {
   value: string
   label: string
 }
 
+interface HeroTag {
+  label: string
+  order?: number
+}
+
+interface ProgressBar {
+  label: string
+  display_value: string
+  percent: number
+  color_variant?: string
+  order?: number
+}
+
+interface HeroData {
+  background_video?: string | null
+  video_poster?: string | null
+  title_line_1?: string
+  title_accent?: string
+  description?: string
+  primary_cta_label?: string
+  primary_cta_action?: string
+  primary_cta_href?: string
+  secondary_cta_label?: string
+  secondary_cta_href?: string
+  impact_label?: string
+  impact_badge?: string
+  impact_title?: string
+  impact_subtitle?: string
+  tags?: HeroTag[]
+  progress_bars?: ProgressBar[]
+}
+
+const props = defineProps<{
+  hero?: HeroData | null
+  stats?: Stat[]
+}>()
+
 const emit = defineEmits<{
   (e: 'open-donate'): void
 }>()
 
-const stats: Stat[] = [
+const DEFAULT_STATS: Stat[] = [
   { value: '10K+', label: 'Youth Trained' },
-  { value: '36',   label: 'States Reached' },
-  { value: '98%',  label: 'Success Rate' },
-  { value: '50+',  label: 'Expert Trainers' },
+  { value: '36', label: 'States Reached' },
+  { value: '98%', label: 'Success Rate' },
+  { value: '50+', label: 'Expert Trainers' },
 ]
+
+const DEFAULT_TAGS = ['Inclusion', 'Innovation', 'Empowerment', 'Community']
+const DEFAULT_BARS: ProgressBar[] = [
+  { label: 'Youth Trained', display_value: '10,000+', percent: 78, color_variant: 'orange' },
+  { label: 'States Reached', display_value: '36 / 36', percent: 100, color_variant: 'green' },
+]
+
+const heroPoster = computed(
+  () => props.hero?.video_poster || '/images/STREET_DIGITAL_LABS_AFRICA.png',
+)
+const heroVideo = computed(
+  () => props.hero?.background_video || '/video/IMG_9125.MP4',
+)
+const displayStats = computed(() => (props.stats?.length ? props.stats : DEFAULT_STATS))
+const tags = computed(() => {
+  const cms = props.hero?.tags
+  if (cms?.length) return [...cms].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((t) => t.label)
+  return DEFAULT_TAGS
+})
+const progressBars = computed(() => {
+  const cms = props.hero?.progress_bars
+  if (cms?.length) return [...cms].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  return DEFAULT_BARS
+})
+
+const titleLine1 = computed(() => props.hero?.title_line_1 || 'Empowering Africa')
+const titleAccent = computed(() => props.hero?.title_accent || 'One Skill at a Time.')
+const description = computed(
+  () =>
+    props.hero?.description ||
+    'We are a digital skills & innovation hub — training, mentoring, and uplifting young Africans to thrive in the digital economy.',
+)
+const primaryLabel = computed(() => props.hero?.primary_cta_label || 'Donate Now')
+const secondaryLabel = computed(() => props.hero?.secondary_cta_label || 'Explore Programs ↓')
+const secondaryHref = computed(() => props.hero?.secondary_cta_href || '#services')
+const impactLabel = computed(() => props.hero?.impact_label || 'OUR IMPACT')
+const impactBadge = computed(() => props.hero?.impact_badge || '🏆 Best EdTech 2024')
+const impactTitle = computed(() => props.hero?.impact_title || 'Digital Skills for Everyone')
+const impactSub = computed(
+  () => props.hero?.impact_subtitle || 'Empowering communities. Building futures.',
+)
+
+const onPrimaryCta = () => {
+  if (props.hero?.primary_cta_action === 'url' && props.hero.primary_cta_href) {
+    window.location.href = props.hero.primary_cta_href
+    return
+  }
+  emit('open-donate')
+}
 </script>
 
 <template>
   <section id="home" class="hero">
-    <!-- Background video -->
     <video
       class="hero-video"
       autoplay muted loop playsinline
-      poster="/images/STREET_DIGITAL_LABS_AFRICA.png"
+      :poster="heroPoster"
     >
-      <source src="/video/IMG_9125.MP4" type="video/mp4" />
+      <source :src="heroVideo" type="video/mp4" />
     </video>
     <div class="hero-overlay" aria-hidden="true"></div>
 
-
-
-    <!-- Main content grid -->
     <div class="hero-content">
-      <!-- Left column -->
       <div class="hero-left">
         <h1 class="hero-title">
-          Empowering Africa<br />
-          <span class="hero-accent">One Skill at a Time.</span>
+          {{ titleLine1 }}<br />
+          <span class="hero-accent">{{ titleAccent }}</span>
         </h1>
-        <p class="hero-desc">
-          We are a digital skills &amp; innovation hub — training, mentoring, and
-          uplifting young Africans to thrive in the digital economy.
-        </p>
+        <p class="hero-desc">{{ description }}</p>
         <div class="hero-actions">
-          <button class="btn-primary" @click="emit('open-donate')" id="hero-donate-btn">
+          <button class="btn-primary" @click="onPrimaryCta" id="hero-donate-btn">
             <svg viewBox="0 0 24 24" fill="currentColor" class="btn-icon" aria-hidden="true">
               <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"/>
             </svg>
-            Donate Now
+            {{ primaryLabel }}
           </button>
-          <a href="#services" class="btn-outline" id="hero-explore-btn">Explore Programs ↓</a>
+          <a :href="secondaryHref" class="btn-outline" id="hero-explore-btn">{{ secondaryLabel }}</a>
         </div>
 
-        <!-- Stats row -->
         <div class="hero-stats" role="list" aria-label="Impact statistics">
           <div
-            v-for="s in stats"
+            v-for="s in displayStats"
             :key="s.label"
             class="stat-item"
             role="listitem"
@@ -66,39 +145,33 @@ const stats: Stat[] = [
         </div>
       </div>
 
-      <!-- Right column — impact card -->
       <div class="hero-right">
         <div class="impact-card">
           <div class="impact-top">
-            <span class="impact-label">OUR IMPACT</span>
-            <span class="impact-badge">🏆 Best EdTech 2024</span>
+            <span class="impact-label">{{ impactLabel }}</span>
+            <span class="impact-badge">{{ impactBadge }}</span>
           </div>
-          <h2 class="impact-title">Digital Skills<br />for Everyone</h2>
-          <p class="impact-sub">Empowering communities. Building futures.</p>
+          <h2 class="impact-title">{{ impactTitle }}</h2>
+          <p class="impact-sub">{{ impactSub }}</p>
 
           <div class="impact-tags">
-            <span
-              class="tag"
-              v-for="t in ['Inclusion', 'Innovation', 'Empowerment', 'Community']"
-              :key="t"
-            >{{ t }}</span>
+            <span class="tag" v-for="t in tags" :key="t">{{ t }}</span>
           </div>
 
           <div class="impact-progress">
-            <div class="prog-row">
-              <span>Youth Trained</span>
-              <span class="prog-val">10,000+</span>
-            </div>
-            <div class="prog-bar-bg">
-              <div class="prog-bar" style="width: 78%"></div>
-            </div>
-            <div class="prog-row" style="margin-top: 1rem">
-              <span>States Reached</span>
-              <span class="prog-val">36 / 36</span>
-            </div>
-            <div class="prog-bar-bg">
-              <div class="prog-bar prog-bar-green" style="width: 100%"></div>
-            </div>
+            <template v-for="(bar, i) in progressBars" :key="bar.label">
+              <div class="prog-row" :style="i > 0 ? { marginTop: '1rem' } : undefined">
+                <span>{{ bar.label }}</span>
+                <span class="prog-val">{{ bar.display_value }}</span>
+              </div>
+              <div class="prog-bar-bg">
+                <div
+                  class="prog-bar"
+                  :class="{ 'prog-bar-green': bar.color_variant === 'green' }"
+                  :style="{ width: `${bar.percent}%` }"
+                ></div>
+              </div>
+            </template>
           </div>
         </div>
       </div>

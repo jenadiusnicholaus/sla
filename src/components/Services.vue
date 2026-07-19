@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useFadeUp } from '@/composables/useFadeUp'
 
 interface Program {
@@ -6,10 +7,16 @@ interface Program {
   title: string
   description: string
   tag: string
-  tagColor: string
+  tag_color?: string
+  tagColor?: string
+  learn_more_href?: string
 }
 
-const programs: Program[] = [
+const props = defineProps<{
+  programs?: Program[]
+}>()
+
+const DEFAULT_PROGRAMS: Program[] = [
   {
     emoji: '💻',
     title: 'Digital Skills Training',
@@ -40,13 +47,21 @@ const programs: Program[] = [
   },
 ]
 
+const displayPrograms = computed(() => {
+  const list = props.programs?.length ? props.programs : DEFAULT_PROGRAMS
+  return list.map((p) => ({
+    ...p,
+    tagColor: p.tag_color || p.tagColor || '#ff6a00',
+    learnMoreHref: p.learn_more_href || '#contact',
+  }))
+})
+
 useFadeUp('[data-fade-svc]')
 </script>
 
 <template>
   <section id="services" class="services">
     <div class="container">
-      <!-- Header -->
       <div class="section-header" data-fade-svc>
         <span class="eyebrow">What We Do</span>
         <h2 class="section-title">Our Programs</h2>
@@ -54,10 +69,9 @@ useFadeUp('[data-fade-svc]')
         <p class="section-desc">Comprehensive digital skills solutions tailored to empower African communities and create lasting change.</p>
       </div>
 
-      <!-- Grid -->
       <div class="programs-grid">
         <article
-          v-for="program in programs"
+          v-for="program in displayPrograms"
           :key="program.title"
           class="program-card"
           data-fade-svc
@@ -70,7 +84,7 @@ useFadeUp('[data-fade-svc]')
           </div>
           <h3 class="program-title">{{ program.title }}</h3>
           <p class="program-desc">{{ program.description }}</p>
-          <a href="#contact" class="learn-more" :style="{ color: program.tagColor }">
+          <a :href="program.learnMoreHref" class="learn-more" :style="{ color: program.tagColor }">
             Learn more →
           </a>
         </article>

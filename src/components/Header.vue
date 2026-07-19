@@ -1,67 +1,113 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-
-const emit = defineEmits<{
-  (e: 'open-donate'): void
-}>()
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 interface NavLink {
   label: string
   href: string
 }
 
-const isMenuOpen = ref<boolean>(false)
-const isScrolled = ref<boolean>(false)
-const announcementVisible = ref<boolean>(true)
+interface Announcement {
+  message?: string
+  cta_label?: string
+  cta_action?: string
+  cta_url?: string
+  dismissible?: boolean
+  is_active?: boolean
+}
+
+interface Settings {
+  org_name?: string
+  org_short_name?: string
+  tagline?: string
+  logo?: string | null
+  logo_alt?: string
+}
+
+const props = defineProps<{
+  announcement?: Announcement | null
+  nav?: NavLink[]
+  settings?: Settings | null
+}>()
+
+const emit = defineEmits<{
+  (e: 'open-donate'): void
+}>()
+
+const DEFAULT_NAV: NavLink[] = [
+  { label: 'Home', href: '#home' },
+  { label: 'About', href: '#about' },
+  { label: 'Programs', href: '#services' },
+  { label: 'Values', href: '#values' },
+  { label: 'Team', href: '#team' },
+  { label: 'Contact', href: '#contact' },
+]
+
+const isMenuOpen = ref(false)
+const isScrolled = ref(false)
+const announcementVisible = ref(true)
+
+const navLinks = computed(() => (props.nav?.length ? props.nav : DEFAULT_NAV))
+const logoSrc = computed(
+  () => props.settings?.logo || '/images/STREET_DIGITAL_LABS_AFRICA_WITH_WORD.png',
+)
+const logoAlt = computed(
+  () => props.settings?.logo_alt || props.settings?.org_name || 'Street Digital Labs Africa Logo',
+)
+const brandName = computed(() => props.settings?.org_short_name || 'Street Digital Labs')
+const brandSub = computed(() => {
+  const tag = props.settings?.tagline || 'Inclusion for All'
+  return `Africa · ${tag.replace(/!$/, '')}`
+})
+const showAnnouncement = computed(
+  () => announcementVisible.value && props.announcement?.is_active !== false,
+)
+const annMessage = computed(
+  () => props.announcement?.message || 'Help us empower 10,000 more youth this year —',
+)
+const annCta = computed(() => props.announcement?.cta_label || 'Donate Now →')
+
+const onAnnouncementCta = () => {
+  if (props.announcement?.cta_action === 'url' && props.announcement.cta_url) {
+    window.location.href = props.announcement.cta_url
+    return
+  }
+  emit('open-donate')
+}
 
 const toggleMenu = (): void => { isMenuOpen.value = !isMenuOpen.value }
-
 const handleScroll = (): void => { isScrolled.value = window.scrollY > 50 }
 
 onMounted(() => window.addEventListener('scroll', handleScroll))
 onUnmounted(() => window.removeEventListener('scroll', handleScroll))
-
-const navLinks: NavLink[] = [
-  { label: 'Home',     href: '#home' },
-  { label: 'About',    href: '#about' },
-  { label: 'Programs', href: '#services' },
-  { label: 'Values',   href: '#values' },
-  { label: 'Team',     href: '#team' },
-  { label: 'Contact',  href: '#contact' },
-]
 </script>
 
 <template>
   <div class="header-wrap">
-    <!-- Announcement Bar -->
-    <div class="announcement-bar" v-if="announcementVisible">
+    <div class="announcement-bar" v-if="showAnnouncement">
       <span class="ann-pulse"></span>
-      <p>🌍 Help us empower 10,000 more youth this year —
-        <button @click="emit('open-donate')" class="ann-cta">Donate Now →</button>
+      <p>🌍 {{ annMessage }}
+        <button @click="onAnnouncementCta" class="ann-cta">{{ annCta }}</button>
       </p>
-      <button class="ann-close" @click="announcementVisible = false" aria-label="Close announcement">✕</button>
+      <button
+        v-if="announcement?.dismissible !== false"
+        class="ann-close"
+        @click="announcementVisible = false"
+        aria-label="Close announcement"
+      >✕</button>
     </div>
 
-    <!-- Main Header -->
     <header class="header" :class="{ scrolled: isScrolled }">
       <div class="header-container">
-
-        <!-- Logo -->
-        <a href="#home" class="logo" aria-label="Street Digital Labs Africa — Home">
+        <a href="#home" class="logo" :aria-label="`${brandName} — Home`">
           <div class="logo-img-wrap">
-            <img
-              src="/images/STREET_DIGITAL_LABS_AFRICA_WITH_WORD.png"
-              alt="Street Digital Labs Africa Logo"
-              class="header-logo"
-            />
+            <img :src="logoSrc" :alt="logoAlt" class="header-logo" />
           </div>
           <div class="logo-text">
-            <span class="logo-name">Street Digital Labs</span>
-            <span class="logo-sub">Africa · Inclusion for All</span>
+            <span class="logo-name">{{ brandName }}</span>
+            <span class="logo-sub">{{ brandSub }}</span>
           </div>
         </a>
 
-        <!-- Desktop Nav -->
         <nav class="nav" role="navigation" aria-label="Main navigation">
           <a
             v-for="link in navLinks"
@@ -72,7 +118,6 @@ const navLinks: NavLink[] = [
           >{{ link.label }}</a>
         </nav>
 
-        <!-- Right actions -->
         <div class="header-right">
           <div class="donate-border-wrap">
             <button class="donate-btn" @click="emit('open-donate')" id="header-donate-btn">
@@ -95,7 +140,6 @@ const navLinks: NavLink[] = [
         </div>
       </div>
 
-      <!-- Mobile Drawer -->
       <transition name="drawer">
         <div class="mobile-drawer" v-if="isMenuOpen" role="navigation" aria-label="Mobile navigation">
           <a

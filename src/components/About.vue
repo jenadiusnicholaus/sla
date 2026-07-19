@@ -1,35 +1,67 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed } from 'vue'
 import { useFadeUp } from '@/composables/useFadeUp'
 
 interface Stat {
-  number: string
+  value?: string
+  number?: string
   label: string
 }
 
 interface AboutData {
-  title: string
-  description: string
-  mission: string
-  vision: string
-  stats: Stat[]
+  eyebrow?: string
+  title?: string
+  description?: string
+  mission_title?: string
+  mission_text?: string
+  mission_icon?: string
+  vision_title?: string
+  vision_text?: string
+  vision_icon?: string
 }
 
-const aboutData: AboutData = {
-  title: 'About Street Labs',
-  description:
+const props = defineProps<{
+  about?: AboutData | null
+  stats?: Stat[]
+}>()
+
+const DEFAULT_STATS: Stat[] = [
+  { number: '10K+', label: 'Youth Trained' },
+  { number: '36', label: 'States Reached' },
+  { number: '98%', label: 'Success Rate' },
+  { number: '50+', label: 'Expert Trainers' },
+]
+
+const eyebrow = computed(() => props.about?.eyebrow || 'Who We Are')
+const title = computed(() => props.about?.title || 'About Street Labs')
+const description = computed(
+  () =>
+    props.about?.description ||
     'Street Digital Labs Africa (Street Labs) is a digital skills and innovation hub committed to empowering young people and communities across Africa through technology, training, and inclusive opportunities.',
-  mission:
+)
+const missionTitle = computed(() => props.about?.mission_title || 'Our Mission')
+const missionText = computed(
+  () =>
+    props.about?.mission_text ||
     'To empower Africans with digital skills, innovation, and opportunities for a better future.',
-  vision:
+)
+const missionIcon = computed(() => props.about?.mission_icon || '🎯')
+const visionTitle = computed(() => props.about?.vision_title || 'Our Vision')
+const visionText = computed(
+  () =>
+    props.about?.vision_text ||
     'An inclusive Africa where everyone thrives in the digital economy.',
-  stats: [
-    { number: '10K+', label: 'Youth Trained' },
-    { number: '36',   label: 'States Reached' },
-    { number: '98%',  label: 'Success Rate' },
-    { number: '50+',  label: 'Expert Trainers' },
-  ],
-}
+)
+const visionIcon = computed(() => props.about?.vision_icon || '🌍')
+const displayStats = computed(() => {
+  if (props.stats?.length) {
+    return props.stats.map((s) => ({
+      number: s.value || s.number || '',
+      label: s.label,
+    }))
+  }
+  return DEFAULT_STATS
+})
 
 useFadeUp('[data-fade-about]')
 </script>
@@ -37,40 +69,37 @@ useFadeUp('[data-fade-about]')
 <template>
   <section id="about" class="about">
     <div class="container">
-      <!-- Section header -->
       <div class="about-header" data-fade-about>
-        <span class="eyebrow">Who We Are</span>
-        <h2 class="section-title">{{ aboutData.title }}</h2>
+        <span class="eyebrow">{{ eyebrow }}</span>
+        <h2 class="section-title">{{ title }}</h2>
         <div class="title-bar"></div>
-        <p class="section-description">{{ aboutData.description }}</p>
+        <p class="section-description">{{ description }}</p>
       </div>
 
-      <!-- Mission / Vision cards -->
       <div class="mv-grid">
         <div class="mv-card mission-card" data-fade-about>
           <div class="mv-icon-wrap mission-icon">
-            <span class="mv-icon">🎯</span>
+            <span class="mv-icon">{{ missionIcon }}</span>
           </div>
           <div class="mv-body">
-            <h3 class="mv-heading">Our Mission</h3>
-            <p class="mv-text">{{ aboutData.mission }}</p>
+            <h3 class="mv-heading">{{ missionTitle }}</h3>
+            <p class="mv-text">{{ missionText }}</p>
           </div>
         </div>
         <div class="mv-card vision-card" data-fade-about>
           <div class="mv-icon-wrap vision-icon">
-            <span class="mv-icon">🌍</span>
+            <span class="mv-icon">{{ visionIcon }}</span>
           </div>
           <div class="mv-body">
-            <h3 class="mv-heading">Our Vision</h3>
-            <p class="mv-text">{{ aboutData.vision }}</p>
+            <h3 class="mv-heading">{{ visionTitle }}</h3>
+            <p class="mv-text">{{ visionText }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Stats grid -->
       <div class="stats-grid">
         <div
-          v-for="stat in aboutData.stats"
+          v-for="stat in displayStats"
           :key="stat.label"
           class="stat-card"
           data-fade-about

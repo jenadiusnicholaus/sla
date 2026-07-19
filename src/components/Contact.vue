@@ -1,10 +1,22 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { cmsApi } from "@/api/client";
 
-interface ContactInfo {
-  icon: string;
-  label: string;
-  value: string;
+interface Settings {
+  address?: string;
+  phone?: string;
+  email?: string;
+  website_display?: string;
+  website_url?: string;
+  social_handle?: string;
+  response_sla_hours?: number;
+}
+
+interface SocialLink {
+  platform?: string;
+  url: string;
+  icon_label?: string;
+  show_in_contact?: boolean;
 }
 
 interface FormState {
@@ -14,17 +26,40 @@ interface FormState {
   message: string;
 }
 
-const contactItems: ContactInfo[] = [
-  { icon: "📍", label: "Address", value: "Morogoro, Tanzania" },
-  { icon: "📞", label: "Phone", value: "+255 800 123 456" },
-  { icon: "✉️", label: "Email", value: "info@streetlabsafrica.org" },
-  { icon: "🌐", label: "Website", value: "streetlabsafrica.org" },
-];
+const props = defineProps<{
+  settings?: Settings | null;
+  socialLinks?: SocialLink[];
+}>();
+
+const contactItems = computed(() => [
+  { icon: "📍", label: "Address", value: props.settings?.address || "Morogoro, Tanzania" },
+  { icon: "📞", label: "Phone", value: props.settings?.phone || "+255 800 123 456" },
+  { icon: "✉️", label: "Email", value: props.settings?.email || "info@streetlabsafrica.org" },
+  {
+    icon: "🌐",
+    label: "Website",
+    value: props.settings?.website_display || "streetlabsafrica.org",
+  },
+]);
+
+const socials = computed(() => {
+  const list = (props.socialLinks || []).filter((s) => s.show_in_contact !== false);
+  if (list.length) return list.map((s) => ({ label: s.icon_label || s.platform || "•", href: s.url }));
+  return [
+    { label: "f", href: "#" },
+    { label: "𝕏", href: "#" },
+    { label: "in", href: "#" },
+    { label: "▶", href: "#" },
+  ];
+});
+
+const socialHandle = computed(() => props.settings?.social_handle || "@streetlabsafrica");
+const slaHours = computed(() => props.settings?.response_sla_hours || 24);
 
 const form = ref<FormState>({ name: "", email: "", subject: "", message: "" });
-const isSending = ref<boolean>(false);
-const isSent = ref<boolean>(false);
-const sendError = ref<string>("");
+const isSending = ref(false);
+const isSent = ref(false);
+const sendError = ref("");
 
 const sendMessage = async (): Promise<void> => {
   sendError.value = "";
@@ -33,17 +68,21 @@ const sendMessage = async (): Promise<void> => {
     return;
   }
   isSending.value = true;
-  // TODO: connect to a real mail API (e.g. EmailJS / Brevo / SendGrid)
-  await new Promise<void>((resolve) => setTimeout(resolve, 1500));
-  isSending.value = false;
-  isSent.value = true;
+  try {
+    await cmsApi.postContact({ ...form.value });
+    isSent.value = true;
+    form.value = { name: "", email: "", subject: "", message: "" };
+  } catch (e: unknown) {
+    sendError.value = e instanceof Error ? e.message : "Failed to send message.";
+  } finally {
+    isSending.value = false;
+  }
 };
 </script>
 
 <template>
   <section id="contact" class="contact">
     <div class="container">
-      <!-- Header -->
       <div class="section-header">
         <span class="eyebrow">Get In Touch</span>
         <h2 class="section-title">Contact Us</h2>
@@ -54,12 +93,11 @@ const sendMessage = async (): Promise<void> => {
       </div>
 
       <div class="contact-grid">
-        <!-- Info panel -->
         <div class="contact-info">
           <h3 class="info-heading">Let's Connect</h3>
           <p class="info-sub">
             Reach out through any of the channels below and our team will
-            respond within 24 hours.
+            respond within {{ slaHours }} hours.
           </p>
 
           <div class="info-items">
@@ -76,20 +114,20 @@ const sendMessage = async (): Promise<void> => {
             </div>
           </div>
 
-          <!-- Socials -->
           <div class="social-row">
             <a
-              v-for="s in ['f', '𝕏', 'in', '▶']"
-              :key="s"
-              href="#"
+              v-for="s in socials"
+              :key="s.label"
+              :href="s.href"
               class="social-btn"
-              :aria-label="s"
-              >{{ s }}</a
+              :aria-label="s.label"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ s.label }}</a
             >
           </div>
-          <p class="social-handle">@streetlabsafrica</p>
+          <p class="social-handle">{{ socialHandle }}</p>
 
-          <!-- Decorative stripe -->
           <div class="info-stripe">
             <div class="stripe green"></div>
             <div class="stripe white"></div>

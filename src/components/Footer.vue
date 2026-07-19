@@ -1,10 +1,41 @@
 <script setup lang="ts">
+import { ref, computed } from "vue";
+import { cmsApi } from "@/api/client";
+
 interface FooterLink {
   label: string;
   href: string;
 }
 
-const quickLinks: FooterLink[] = [
+interface Settings {
+  org_name?: string;
+  org_short_name?: string;
+  tagline?: string;
+  logo?: string | null;
+  logo_alt?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website_url?: string;
+  website_display?: string;
+  copyright_name?: string;
+  footer_credit?: string;
+}
+
+interface SocialLink {
+  platform?: string;
+  url: string;
+  icon_label?: string;
+  show_in_footer?: boolean;
+}
+
+const props = defineProps<{
+  settings?: Settings | null;
+  nav?: FooterLink[];
+  socialLinks?: SocialLink[];
+}>();
+
+const DEFAULT_LINKS: FooterLink[] = [
   { label: "Home", href: "#home" },
   { label: "About Us", href: "#about" },
   { label: "Programs", href: "#services" },
@@ -13,12 +44,53 @@ const quickLinks: FooterLink[] = [
   { label: "Contact", href: "#contact" },
 ];
 
+const quickLinks = computed(() => (props.nav?.length ? props.nav : DEFAULT_LINKS));
 const currentYear = new Date().getFullYear();
+const logoSrc = computed(
+  () => props.settings?.logo || "/images/STREET_DIGITAL_LABS_AFRICA_WITH_WORD.png",
+);
+const brandName = computed(() => props.settings?.org_short_name || "Street Digital Labs");
+const tagline = computed(() => props.settings?.tagline || "Inclusion for All! 🌍");
+const copyrightName = computed(
+  () => props.settings?.copyright_name || props.settings?.org_name || "Street Digital Labs Africa",
+);
+const footerCredit = computed(() => props.settings?.footer_credit || "Made with ❤️ for Africa");
+const socials = computed(() => {
+  const list = (props.socialLinks || []).filter((s) => s.show_in_footer !== false);
+  if (list.length) return list.map((s) => ({ label: s.icon_label || s.platform || "•", href: s.url }));
+  return [
+    { label: "f", href: "#" },
+    { label: "𝕏", href: "#" },
+    { label: "in", href: "#" },
+    { label: "▶", href: "#" },
+  ];
+});
+
+const newsletterEmail = ref("");
+const newsletterStatus = ref("");
+const newsletterBusy = ref(false);
+
+const subscribe = async () => {
+  newsletterStatus.value = "";
+  if (!newsletterEmail.value.includes("@")) {
+    newsletterStatus.value = "Enter a valid email.";
+    return;
+  }
+  newsletterBusy.value = true;
+  try {
+    await cmsApi.postNewsletter(newsletterEmail.value);
+    newsletterStatus.value = "Subscribed — thank you!";
+    newsletterEmail.value = "";
+  } catch (e: unknown) {
+    newsletterStatus.value = e instanceof Error ? e.message : "Subscription failed.";
+  } finally {
+    newsletterBusy.value = false;
+  }
+};
 </script>
 
 <template>
   <footer class="footer">
-    <!-- Top stripe -->
     <div class="footer-stripe">
       <div class="stripe green"></div>
       <div class="stripe white"></div>
@@ -27,39 +99,38 @@ const currentYear = new Date().getFullYear();
 
     <div class="container">
       <div class="footer-grid">
-        <!-- Brand -->
         <div class="footer-brand">
           <div class="footer-logo">
             <img
-              src="/images/STREET_DIGITAL_LABS_AFRICA_WITH_WORD.png"
-              alt="Street Digital Labs Africa"
+              :src="logoSrc"
+              :alt="settings?.logo_alt || brandName"
               class="footer-logo-img"
             />
             <div class="footer-logo-text">
-              <span class="logo-name">Street Digital Labs</span>
+              <span class="logo-name">{{ brandName }}</span>
               <span class="logo-sub">Africa</span>
             </div>
           </div>
-          <p class="footer-tagline">Inclusion for All! 🌍</p>
+          <p class="footer-tagline">{{ tagline }}</p>
           <p class="footer-desc">
             A digital skills and innovation hub committed to empowering young
             people and communities across Africa through technology and
             opportunity.
           </p>
-          <!-- Social -->
           <div class="social-row">
             <a
-              v-for="s in ['f', '𝕏', 'in', '▶']"
-              :key="s"
-              href="#"
+              v-for="s in socials"
+              :key="s.label"
+              :href="s.href"
               class="social-btn"
-              :aria-label="s"
-              >{{ s }}</a
+              :aria-label="s.label"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ s.label }}</a
             >
           </div>
         </div>
 
-        <!-- Quick Links -->
         <div class="footer-nav">
           <h4 class="footer-heading">Quick Links</h4>
           <a
@@ -71,46 +142,52 @@ const currentYear = new Date().getFullYear();
           >
         </div>
 
-        <!-- Contact -->
         <div class="footer-contact">
           <h4 class="footer-heading">Contact</h4>
-          <p>📍 Morogoro, Tanzania</p>
-          <p>📞 +255 800 123 456</p>
-          <p>✉️ info@streetlabsafrica.org</p>
+          <p>📍 {{ settings?.address || "Morogoro, Tanzania" }}</p>
+          <p>📞 {{ settings?.phone || "+255 800 123 456" }}</p>
+          <p>✉️ {{ settings?.email || "info@streetlabsafrica.org" }}</p>
           <p>
             🌐
-            <a href="https://streetlabsafrica.org" class="footer-link-inline"
-              >streetlabsafrica.org</a
+            <a
+              :href="settings?.website_url || 'https://streetlabsafrica.org'"
+              class="footer-link-inline"
+              >{{ settings?.website_display || "streetlabsafrica.org" }}</a
             >
           </p>
         </div>
 
-        <!-- Newsletter -->
         <div class="footer-newsletter">
           <h4 class="footer-heading">Stay Updated</h4>
           <p class="newsletter-desc">
             Get the latest news on our programs and impact.
           </p>
-          <div class="newsletter-form">
+          <form class="newsletter-form" @submit.prevent="subscribe">
             <input
+              v-model="newsletterEmail"
               type="email"
               class="newsletter-input"
               placeholder="your@email.com"
               id="footer-newsletter-email"
             />
-            <button class="newsletter-btn" id="footer-newsletter-submit">
-              Subscribe
+            <button
+              class="newsletter-btn"
+              id="footer-newsletter-submit"
+              type="submit"
+              :disabled="newsletterBusy"
+            >
+              {{ newsletterBusy ? "…" : "Subscribe" }}
             </button>
-          </div>
+          </form>
+          <p v-if="newsletterStatus" class="newsletter-status">{{ newsletterStatus }}</p>
         </div>
       </div>
 
-      <!-- Bottom bar -->
       <div class="footer-bottom">
         <p>
-          © {{ currentYear }} Street Digital Labs Africa. All rights reserved.
+          © {{ currentYear }} {{ copyrightName }}. All rights reserved.
         </p>
-        <p class="footer-credit">Made with ❤️ for Africa</p>
+        <p class="footer-credit">{{ footerCredit }}</p>
       </div>
     </div>
   </footer>
@@ -313,6 +390,15 @@ const currentYear = new Date().getFullYear();
 }
 .newsletter-btn:hover {
   transform: translateY(-1px);
+}
+.newsletter-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.newsletter-status {
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* Bottom bar */

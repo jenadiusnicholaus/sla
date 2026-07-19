@@ -1,69 +1,123 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { cmsApi } from '@/api/client'
 
-// ── Types ────────────────────────────────────────────────────────
 interface DonationTier {
-  amount: number
+  amount: number | string
   label: string
   impact: string
 }
 
 interface PaymentMethod {
-  id: string
+  id?: string
+  code?: string
   name: string
   icon: string
   description: string
   color: string
+  requires_phone?: boolean
+}
+
+interface DonateCopy {
+  title?: string
+  subtitle?: string
+  country_dial_code?: string
+  country_flag_label?: string
+  secure_note?: string
+  success_title?: string
+  success_body_template?: string
+}
+
+interface DonatePayload {
+  copy?: DonateCopy | null
+  tiers?: DonationTier[]
+  payment_methods?: PaymentMethod[]
 }
 
 type DonationType = 'once' | 'monthly'
 
-// ── Props / Emits ────────────────────────────────────────────────
+const props = defineProps<{
+  donate?: DonatePayload | null
+}>()
+
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-// ── State ────────────────────────────────────────────────────────
 const donationType = ref<DonationType>('once')
 const selectedAmount = ref<number>(50)
-const customAmount   = ref<string>('')
-const selectedMethod = ref<string>('selcom')
-const phone          = ref<string>('')
-const isProcessing   = ref<boolean>(false)
-const isSuccess      = ref<boolean>(false)
-const errorMsg       = ref<string>('')
+const customAmount = ref('')
+const selectedMethod = ref('selcom')
+const phone = ref('')
+const isProcessing = ref(false)
+const isSuccess = ref(false)
+const errorMsg = ref('')
 
-const tiers: DonationTier[] = [
-  { amount: 10,  label: '$10',  impact: 'Funds 1 day of digital training' },
-  { amount: 25,  label: '$25',  impact: 'Provides data bundle for 5 students' },
-  { amount: 50,  label: '$50',  impact: 'Sponsors a full week of learning' },
+const DEFAULT_TIERS: DonationTier[] = [
+  { amount: 10, label: '$10', impact: 'Funds 1 day of digital training' },
+  { amount: 25, label: '$25', impact: 'Provides data bundle for 5 students' },
+  { amount: 50, label: '$50', impact: 'Sponsors a full week of learning' },
   { amount: 100, label: '$100', impact: 'Equips a youth with a skill kit' },
   { amount: 250, label: '$250', impact: 'Funds a month of community outreach' },
   { amount: 500, label: '$500', impact: 'Sponsors a trainee for an entire term' },
 ]
 
-const paymentMethods: PaymentMethod[] = [
-  { id: 'selcom',   name: 'Selcom Wallet',   icon: '📱', description: 'Pay via Selcom mobile wallet', color: '#e84a00' },
-  { id: 'mpesa',    name: 'M-Pesa',          icon: '📲', description: 'Pay via M-Pesa mobile money',  color: '#00a859' },
-  { id: 'airtel',   name: 'Airtel Money',    icon: '📡', description: 'Pay via Airtel Money',          color: '#e00000' },
-  { id: 'card',     name: 'Credit / Debit',  icon: '💳', description: 'Visa, Mastercard, Verve',       color: '#163566' },
+const DEFAULT_METHODS: PaymentMethod[] = [
+  { code: 'selcom', name: 'Selcom Wallet', icon: '📱', description: 'Pay via Selcom mobile wallet', color: '#e84a00', requires_phone: true },
+  { code: 'mpesa', name: 'M-Pesa', icon: '📲', description: 'Pay via M-Pesa mobile money', color: '#00a859', requires_phone: true },
+  { code: 'airtel', name: 'Airtel Money', icon: '📡', description: 'Pay via Airtel Money', color: '#e00000', requires_phone: true },
+  { code: 'card', name: 'Credit / Debit', icon: '💳', description: 'Visa, Mastercard, Verve', color: '#163566', requires_phone: false },
 ]
 
-// ── Computed ─────────────────────────────────────────────────────
-const finalAmount = computed<number>(() =>
-  customAmount.value ? parseFloat(customAmount.value) || 0 : selectedAmount.value
+const tiers = computed(() => {
+  const list = props.donate?.tiers?.length ? props.donate.tiers : DEFAULT_TIERS
+  return list.map((t) => ({ ...t, amount: Number(t.amount) }))
+})
+
+const paymentMethods = computed(() => {
+  const list = props.donate?.payment_methods?.length
+    ? props.donate.payment_methods
+    : DEFAULT_METHODS
+  return list.map((m) => ({
+    ...m,
+    id: m.code || m.id || m.name,
+  }))
+})
+
+const copy = computed(() => props.donate?.copy || {})
+const modalTitle = computed(() => copy.value.title || 'Make a Donation')
+const modalSub = computed(
+  () => copy.value.subtitle || "Your gift empowers Africa's next digital generation.",
+)
+const successTitle = computed(() => copy.value.success_title || 'Thank You!')
+const secureNote = computed(() => copy.value.secure_note || 'Secure 256-bit SSL encryption')
+
+const finalAmount = computed(() =>
+  customAmount.value ? parseFloat(customAmount.value) || 0 : selectedAmount.value,
 )
 
-const currentTier = computed<DonationTier | undefined>(() =>
-  tiers.find(t => t.amount === selectedAmount.value)
+const currentTier = computed(() =>
+  tiers.value.find((t) => t.amount === selectedAmount.value),
 )
+
+const selectedMethodMeta = computed(() =>
+  paymentMethods.value.find((m) => m.id === selectedMethod.value),
+)
+
+const successBody = computed(() => {
+  const template =
+    copy.value.success_body_template ||
+    'Your donation of {amount} {currency} has been received.'
+  return template
+    .replace('{amount}', String(finalAmount.value))
+    .replace('{currency}', 'USD')
+})
 
 const selectAmount = (amount: number): void => {
   selectedAmount.value = amount
-  customAmount.value   = ''
+  customAmount.value = ''
 }
 
-// ── Selcom integration (stubbed — replace with real API calls) ───
 const processDonation = async (): Promise<void> => {
   errorMsg.value = ''
 
@@ -71,7 +125,9 @@ const processDonation = async (): Promise<void> => {
     errorMsg.value = 'Please enter a valid donation amount.'
     return
   }
-  if (['selcom', 'mpesa', 'airtel'].includes(selectedMethod.value) && !phone.value) {
+  if (selectedMethodMeta.value?.requires_phone !== false
+    && ['selcom', 'mpesa', 'airtel'].includes(selectedMethod.value)
+    && !phone.value) {
     errorMsg.value = 'Please enter your mobile phone number.'
     return
   }
@@ -79,14 +135,13 @@ const processDonation = async (): Promise<void> => {
   isProcessing.value = true
 
   try {
-    /**
-     * TODO: Replace with real Selcom API integration.
-     * Selcom API endpoint: https://apigw.selcommobile.com/v1/
-     * Required: vendor_id, order_id, buyer_msisdn, amount, currency
-     * Docs: https://developer.selcom.net/
-     */
-    await new Promise<void>((resolve) => setTimeout(resolve, 2200))
-
+    await cmsApi.postDonation({
+      amount: finalAmount.value,
+      currency: 'USD',
+      donation_type: donationType.value,
+      payment_method_code: selectedMethod.value,
+      phone: phone.value || undefined,
+    })
     isSuccess.value = true
   } catch (err: unknown) {
     errorMsg.value = err instanceof Error
@@ -98,12 +153,12 @@ const processDonation = async (): Promise<void> => {
 }
 
 const resetForm = (): void => {
-  isSuccess.value      = false
-  isProcessing.value   = false
+  isSuccess.value = false
+  isProcessing.value = false
   selectedAmount.value = 50
-  customAmount.value   = ''
-  phone.value          = ''
-  errorMsg.value       = ''
+  customAmount.value = ''
+  phone.value = ''
+  errorMsg.value = ''
 }
 </script>
 
@@ -119,11 +174,8 @@ const resetForm = (): void => {
       <!-- ── Success state ───────────────── -->
       <div v-if="isSuccess" class="success-screen">
         <div class="success-icon">💚</div>
-        <h2 class="success-title">Thank You!</h2>
-        <p class="success-sub">
-          Your donation of <strong>${{ finalAmount }}</strong> is making a real
-          difference for young Africans learning digital skills.
-        </p>
+        <h2 class="success-title">{{ successTitle }}</h2>
+        <p class="success-sub">{{ successBody }}</p>
         <p class="success-ref">Transaction reference: <code>SLA-{{ Date.now() }}</code></p>
         <div class="success-actions">
           <button class="btn-another" @click="resetForm">Make Another Donation</button>
@@ -139,8 +191,8 @@ const resetForm = (): void => {
             <img src="/images/STREET_DIGITAL_LABS_AFRICA_WITH_WORD.png" alt="SLA Logo" class="modal-logo-img" />
           </div>
           <div>
-            <h2 class="modal-title">Make a Donation</h2>
-            <p class="modal-sub">Your gift empowers Africa's next digital generation.</p>
+            <h2 class="modal-title">{{ modalTitle }}</h2>
+            <p class="modal-sub">{{ modalSub }}</p>
           </div>
         </div>
 
@@ -223,7 +275,7 @@ const resetForm = (): void => {
         >
           <label for="phone-input" class="phone-label">Mobile Number</label>
           <div class="phone-input-wrap">
-            <span class="phone-flag">🇹🇿 +255</span>
+            <span class="phone-flag">{{ copy.country_flag_label || '🇹🇿' }} {{ copy.country_dial_code || '+255' }}</span>
             <input
               id="phone-input"
               v-model="phone"
@@ -257,7 +309,7 @@ const resetForm = (): void => {
           </span>
         </button>
 
-        <p class="secure-note">🔒 Secure 256-bit SSL encrypted transaction</p>
+        <p class="secure-note">🔒 {{ secureNote }}</p>
       </template>
     </div>
   </div>

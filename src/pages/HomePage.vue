@@ -10,25 +10,66 @@ import Team from "../components/Team.vue";
 import Contact from "../components/Contact.vue";
 import Footer from "../components/Footer.vue";
 import DonatePage from "../components/DonatePage.vue";
+import { useHomepageCms } from "@/composables/useHomepageCms";
 
 const showDonateModal = ref<boolean>(false);
+const {
+  useLiveHomepage,
+  settings,
+  announcement,
+  hero,
+  gallery,
+  about,
+  values,
+  programs,
+  orgChart,
+  team,
+  socialLinks,
+  donate,
+  statsFor,
+  navFor,
+} = useHomepageCms();
+
+const heroStats = statsFor("hero");
+const aboutStats = statsFor("about");
+const galleryStats = statsFor("gallery");
+const headerNav = navFor("header");
+const footerNav = navFor("footer");
+
+useLiveHomepage();
 </script>
 
 <template>
   <div class="sla-website">
-    <Header @open-donate="showDonateModal = true" />
-    <Hero @open-donate="showDonateModal = true" />
-    <ImageGallery />
-    <About />
-    <BrandValues />
-    <Services />
-    <Team />
-    <Contact />
-    <Footer />
+    <Header
+      :announcement="announcement"
+      :nav="headerNav"
+      :settings="settings"
+      @open-donate="showDonateModal = true"
+    />
+    <Hero
+      :hero="hero"
+      :stats="heroStats"
+      @open-donate="showDonateModal = true"
+    />
+    <ImageGallery :gallery="gallery" :stats="galleryStats" />
+    <About :about="about" :stats="aboutStats" />
+    <BrandValues :values="values" />
+    <Services :programs="programs" />
+    <Team :org-chart="orgChart" :team="team" :settings="settings" />
+    <Contact :settings="settings" :social-links="socialLinks" />
+    <Footer
+      :settings="settings"
+      :nav="footerNav"
+      :social-links="socialLinks"
+    />
 
-    <!-- Donation Form Modal -->
     <transition name="fade">
-      <DonatePage v-if="showDonateModal" @close="showDonateModal = false" />
+      <DonatePage
+        v-if="showDonateModal"
+        :donate="donate"
+        @close="showDonateModal = false"
+      />
     </transition>
   </div>
 </template>
@@ -59,7 +100,6 @@ body {
   background: #f5f7fa;
 }
 
-/* Modal Fade Transition */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.25s ease;

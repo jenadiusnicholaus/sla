@@ -1,12 +1,38 @@
-
 :root {
-  --va-font-family: 'Source Sans Pro', sans-serif;
+  --sla-navy: #0a1f44;
+  --sla-navy-deep: #06152e;
+  --sla-orange: #ff6a00;
+  --sla-green: #0a7a3d;
+  --sla-green-bright: #2dd47a;
+  --sla-muted: #5b6b82;
+  --sla-border: #e6ebf2;
+  --sla-surface: #f4f6f9;
+  --sla-card: #ffffff;
+  --va-font-family: 'Poppins', 'Source Sans Pro', sans-serif;
 }
 
-a {
-  text-decoration: none;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
+  font-family: var(--va-font-family);
+  background: var(--sla-surface);
+  color: var(--sla-navy);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
 }

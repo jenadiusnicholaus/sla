@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useFadeUp } from "@/composables/useFadeUp";
 
 interface GalleryImage {
@@ -8,113 +9,117 @@ interface GalleryImage {
   color: string;
 }
 
-const imagePool: GalleryImage[] = [
-  {
-    src: "/images/gallery_coding.png",
-    alt: "Youth coding",
-    label: "Digital Skills Training",
-    color: "#ff6a00",
-  },
-  {
-    src: "/images/gallery_workshop.png",
-    alt: "Team workshop",
-    label: "Collaborative Innovation",
-    color: "#0a7a3d",
-  },
-  {
-    src: "/images/gallery_robotics.png",
-    alt: "Robotics lab",
-    label: "Robotics & Hardware Labs",
-    color: "#163566",
-  },
-  {
-    src: "/images/gallery_mentorship.png",
-    alt: "Mentorship",
-    label: "1-on-1 Mentorship Coaching",
-    color: "#ff6a00",
-  },
-  {
-    src: "/images/gallery_presentation.png",
-    alt: "Tech talk",
-    label: "Project Pitch Presentations",
-    color: "#7c3aed",
-  },
-  {
-    src: "/images/gallery_graduation.png",
-    alt: "Graduation",
-    label: "Empowerment Graduation Day",
-    color: "#0a7a3d",
-  },
-  {
-    src: "/images/gallery_outdoor.png",
-    alt: "Outdoor learning",
-    label: "Outreach & Community Hub",
-    color: "#0891b2",
-  },
-  {
-    src: "/images/gallery_design.png",
-    alt: "UX Design",
-    label: "UI/UX & Creative Digital Arts",
-    color: "#ff6a00",
-  },
-  {
-    src: "/images/gallery_hackathon.png",
-    alt: "Hackathon",
-    label: "Hackathons & Tech Sprints",
-    color: "#163566",
-  },
+interface CmsGalleryImage {
+  image?: string;
+  alt?: string;
+  label?: string;
+  accent_color?: string;
+  is_active?: boolean;
+  order?: number;
+}
+
+interface GallerySection {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  images?: CmsGalleryImage[];
+}
+
+interface Stat {
+  value: string;
+  label: string;
+}
+
+const props = defineProps<{
+  gallery?: GallerySection | null;
+  stats?: Stat[];
+}>();
+
+const DEFAULT_IMAGES: GalleryImage[] = [
+  { src: "/images/gallery_coding.png", alt: "Youth coding", label: "Digital Skills Training", color: "#ff6a00" },
+  { src: "/images/gallery_workshop.png", alt: "Team workshop", label: "Collaborative Innovation", color: "#0a7a3d" },
+  { src: "/images/gallery_robotics.png", alt: "Robotics lab", label: "Robotics & Hardware Labs", color: "#163566" },
+  { src: "/images/gallery_mentorship.png", alt: "Mentorship", label: "1-on-1 Mentorship Coaching", color: "#ff6a00" },
+  { src: "/images/gallery_presentation.png", alt: "Tech talk", label: "Project Pitch Presentations", color: "#7c3aed" },
+  { src: "/images/gallery_graduation.png", alt: "Graduation", label: "Empowerment Graduation Day", color: "#0a7a3d" },
+  { src: "/images/gallery_outdoor.png", alt: "Outdoor learning", label: "Outreach & Community Hub", color: "#0891b2" },
+  { src: "/images/gallery_design.png", alt: "UX Design", label: "UI/UX & Creative Digital Arts", color: "#ff6a00" },
+  { src: "/images/gallery_hackathon.png", alt: "Hackathon", label: "Hackathons & Tech Sprints", color: "#163566" },
 ];
 
-// 3 rows, each with a different starting offset for variety
-const rows = [
-  { direction: "right", images: [...imagePool, ...imagePool], speed: 40 },
-  {
-    direction: "left",
-    images: [
-      ...imagePool.slice(3),
-      ...imagePool.slice(0, 3),
-      ...imagePool.slice(3),
-      ...imagePool.slice(0, 3),
-    ],
-    speed: 50,
-  },
-  {
-    direction: "right",
-    images: [
-      ...imagePool.slice(6),
-      ...imagePool.slice(0, 6),
-      ...imagePool.slice(6),
-      ...imagePool.slice(0, 6),
-    ],
-    speed: 35,
-  },
+const DEFAULT_STATS: [string, string][] = [
+  ["10K+", "Youth Empowered"],
+  ["36", "States Covered"],
+  ["50+", "Programs Run"],
+  ["98%", "Success Rate"],
 ];
+
+const imagePool = computed<GalleryImage[]>(() => {
+  const cmsImages = (props.gallery?.images || [])
+    .filter((img) => img.is_active !== false && img.image)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((img) => ({
+      src: img.image as string,
+      alt: img.alt || img.label || "Gallery image",
+      label: img.label || "",
+      color: img.accent_color || "#ff6a00",
+    }));
+  return cmsImages.length ? cmsImages : DEFAULT_IMAGES;
+});
+
+const rows = computed(() => {
+  const pool = imagePool.value;
+  return [
+    { direction: "right", images: [...pool, ...pool], speed: 40 },
+    {
+      direction: "left",
+      images: [
+        ...pool.slice(3),
+        ...pool.slice(0, 3),
+        ...pool.slice(3),
+        ...pool.slice(0, 3),
+      ],
+      speed: 50,
+    },
+    {
+      direction: "right",
+      images: [
+        ...pool.slice(6),
+        ...pool.slice(0, 6),
+        ...pool.slice(6),
+        ...pool.slice(0, 6),
+      ],
+      speed: 35,
+    },
+  ];
+});
+
+const eyebrow = computed(() => props.gallery?.eyebrow || "Our Community In Action");
+const title = computed(() => props.gallery?.title || "Hands On at SLA");
+const description = computed(
+  () =>
+    props.gallery?.description ||
+    "A living mosaic of moments — rows scroll endlessly left and right, showcasing the energy inside Street Labs.",
+);
+const displayStats = computed(() => {
+  if (props.stats?.length) return props.stats.map((s) => [s.value, s.label] as [string, string]);
+  return DEFAULT_STATS;
+});
 
 useFadeUp("[data-fade-gallery]");
 </script>
 
 <template>
   <section class="gallery-section">
-    <!-- Header -->
     <div class="gallery-header" data-fade-gallery>
-      <span class="eyebrow">Our Community In Action</span>
-      <h2 class="section-title">Hands On at SLA</h2>
+      <span class="eyebrow">{{ eyebrow }}</span>
+      <h2 class="section-title">{{ title }}</h2>
       <div class="title-bar"></div>
-      <p class="section-desc">
-        A living mosaic of moments — rows scroll endlessly left and right,
-        showcasing the energy inside Street Labs.
-      </p>
+      <p class="section-desc">{{ description }}</p>
     </div>
 
-    <!-- ── Marquee Gallery ──────────────────────────────── -->
     <div class="marquee-gallery" aria-label="Scrolling image gallery">
       <div v-for="(row, rowIdx) in rows" :key="rowIdx" class="marquee-row">
-        <!--
-          Two copies of the strip sit side-by-side.
-          When the CSS translateX animation shifts one full copy width off-screen
-          the duplicate fills in — creating a seamless, endless loop.
-          Hover pauses the animation via animation-play-state.
-        -->
         <div
           class="marquee-track"
           :class="row.direction === 'left' ? 'scroll-left' : 'scroll-right'"
@@ -141,15 +146,9 @@ useFadeUp("[data-fade-gallery]");
       </div>
     </div>
 
-    <!-- Stats strip -->
     <div class="gallery-stats" data-fade-gallery>
       <div
-        v-for="[num, lbl] in [
-          ['10K+', 'Youth Empowered'],
-          ['36', 'States Covered'],
-          ['50+', 'Programs Run'],
-          ['98%', 'Success Rate'],
-        ]"
+        v-for="[num, lbl] in displayStats"
         :key="num"
         class="gstat"
       >

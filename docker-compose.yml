@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  sla:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sla-frontend
+    ports:
+      - "9202:9202"
+    restart: unless-stopped
+    networks:
+      - sla-network
+
+networks:
+  sla-network:
+    driver: bridge

@@ -1,7 +1,7 @@
-.PHONY: help build up down logs restart clean deploy docker-deploy git-pull
+.PHONY: help build up up-build down logs restart clean deploy docker-deploy git-pull
 
-# Variables
-DOCKER_COMPOSE := docker compose
+# Auto-detect docker compose command (v2 plugin vs v1 standalone)
+DOCKER_COMPOSE := $(shell if docker compose version >/dev/null 2>&1; then echo "docker compose"; else echo "docker-compose"; fi)
 CONTAINER_NAME := sla-frontend
 PORT := 9202
 

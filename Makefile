@@ -1,4 +1,4 @@
-.PHONY: help build up up-build down logs restart clean deploy docker-deploy git-pull
+.PHONY: help build up up-build down logs logs-follow logs-all restart clean deploy docker-deploy git-pull
 
 # Auto-detect docker compose command (v2 plugin vs v1 standalone)
 DOCKER_COMPOSE := $(shell if docker compose version >/dev/null 2>&1; then echo "docker compose"; else echo "docker-compose"; fi)
@@ -22,8 +22,14 @@ up-build: ## Build and start the Docker container
 down: ## Stop and remove the Docker container
 	$(DOCKER_COMPOSE) down
 
-logs: ## Show Docker container logs
+logs: ## Show last 50 lines of logs (non-blocking)
+	$(DOCKER_COMPOSE) logs --tail=50
+
+logs-follow: ## Follow logs in real-time (Ctrl+C to stop)
 	$(DOCKER_COMPOSE) logs -f
+
+logs-all: ## Show all logs
+	$(DOCKER_COMPOSE) logs
 
 restart: ## Restart the Docker container
 	$(DOCKER_COMPOSE) restart

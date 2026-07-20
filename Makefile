@@ -40,10 +40,10 @@ clean: ## Stop and remove containers, images, and volumes
 git-pull: ## Pull the latest code from origin/main
 	git pull origin main
 
-deploy: git-pull up-build ## Full deploy: pull latest code, rebuild and restart container
+deploy: git-pull down up-build ## Full deploy: pull latest code, stop/remove old container, rebuild and restart
 	@echo "Deployment complete. Site running on http://localhost:$(PORT)"
 
-docker-deploy: up-build ## Build and restart container without git pull
+docker-deploy: down up-build ## Build and restart container without git pull
 	@echo "Docker deployment complete. Site running on http://localhost:$(PORT)"
 
 status: ## Show container status

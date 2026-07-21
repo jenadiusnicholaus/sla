@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useFadeUp } from '@/composables/useFadeUp'
+import LandingHeader from '@/components/landing/LandingHeader.vue'
+import LandingIcon from '@/components/landing/LandingIcon.vue'
 
 interface Stat {
   value?: string
@@ -69,17 +71,18 @@ useFadeUp('[data-fade-about]')
 <template>
   <section id="about" class="about">
     <div class="container">
-      <div class="about-header" data-fade-about>
-        <span class="eyebrow">{{ eyebrow }}</span>
-        <h2 class="section-title">{{ title }}</h2>
-        <div class="title-bar"></div>
-        <p class="section-description">{{ description }}</p>
-      </div>
+      <LandingHeader
+        index="03"
+        :kicker="eyebrow"
+        :title="title"
+        :description="description"
+        data-fade-about
+      />
 
       <div class="mv-grid">
         <div class="mv-card mission-card" data-fade-about>
           <div class="mv-icon-wrap mission-icon">
-            <span class="mv-icon">{{ missionIcon }}</span>
+            <LandingIcon :emoji="missionIcon" name="target" />
           </div>
           <div class="mv-body">
             <h3 class="mv-heading">{{ missionTitle }}</h3>
@@ -88,7 +91,7 @@ useFadeUp('[data-fade-about]')
         </div>
         <div class="mv-card vision-card" data-fade-about>
           <div class="mv-icon-wrap vision-icon">
-            <span class="mv-icon">{{ visionIcon }}</span>
+            <LandingIcon :emoji="visionIcon" name="globe" />
           </div>
           <div class="mv-body">
             <h3 class="mv-heading">{{ visionTitle }}</h3>
@@ -117,67 +120,45 @@ useFadeUp('[data-fade-about]')
 
 .container { max-width: 1200px; margin: 0 auto; padding: 3rem 0.5rem; }
 
-/* Eyebrow + title */
-.about-header { text-align: center; margin-bottom: 4rem; }
-.eyebrow {
-  display: inline-block;
-  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.14em;
-  text-transform: uppercase; color: #ff6a00;
-  font-family: 'Poppins', sans-serif;
-  background: rgba(255,106,0,0.08); border: 1px solid rgba(255,106,0,0.2);
-  padding: 0.3rem 1rem; border-radius: 50px; margin-bottom: 1rem;
-}
-.section-title {
-  font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800;
-  color: #0a1f44; margin-bottom: 0.75rem;
-  font-family: 'Poppins', sans-serif; letter-spacing: -0.02em;
-}
-.title-bar {
-  width: 56px; height: 4px; background: linear-gradient(90deg, #ff6a00, #0a7a3d);
-  margin: 0 auto 1.5rem; border-radius: 2px;
-}
-.section-description {
-  font-size: 1.05rem; color: #5a6a85;
-  max-width: 700px; margin: 0 auto; line-height: 1.8;
-}
-
 /* Mission / Vision */
 .mv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem; }
 .mv-card {
   display: flex; align-items: flex-start; gap: 1.25rem;
-  padding: 2.25rem; border-radius: 18px;
+  padding: 2rem; border-radius: 6px;
+  border-left: 3px solid;
 }
-.mission-card { background: #fff8f3; border: 1.5px solid rgba(255,106,0,0.15); }
-.vision-card  { background: #f0faf4; border: 1.5px solid rgba(10,122,61,0.15); }
+.mission-card { background: #fafbfc; border-color: #ff6a00; border-top: 1px solid rgba(10, 31, 68, 0.06); border-right: 1px solid rgba(10, 31, 68, 0.06); border-bottom: 1px solid rgba(10, 31, 68, 0.06); }
+.vision-card  { background: #fafbfc; border-color: #0a7a3d; border-top: 1px solid rgba(10, 31, 68, 0.06); border-right: 1px solid rgba(10, 31, 68, 0.06); border-bottom: 1px solid rgba(10, 31, 68, 0.06); }
 
 .mv-icon-wrap {
-  width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
+  width: 52px; height: 52px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
 }
-.mission-icon { background: rgba(255,106,0,0.12); }
-.vision-icon  { background: rgba(10,122,61,0.12); }
+.mission-icon { background: rgba(255,106,0,0.08); color: #ff6a00; border: 1px solid rgba(255,106,0,0.2); }
+.vision-icon  { background: rgba(10,122,61,0.08); color: #0a7a3d; border: 1px solid rgba(10,122,61,0.2); }
 
 .mv-heading {
-  font-size: 1.15rem; font-weight: 700; color: #0a1f44;
-  margin-bottom: 0.5rem; font-family: 'Poppins', sans-serif;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.35rem; font-weight: 700; color: #0a1f44;
+  margin-bottom: 0.5rem;
 }
 .mv-text { color: #5a6a85; line-height: 1.75; font-size: 0.95rem; }
 
 /* Stats */
-.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: rgba(10, 31, 68, 0.08); border: 1px solid rgba(10, 31, 68, 0.08); border-radius: 6px; overflow: hidden; }
 .stat-card {
-  background: linear-gradient(135deg, #0a1f44 0%, #163566 100%);
-  color: white; padding: 2rem 1.5rem;
-  border-radius: 18px; text-align: center;
-  transition: transform 0.3s, box-shadow 0.3s;
-  border: 1px solid rgba(255,255,255,0.06);
+  background: #fff;
+  color: #0a1f44; padding: 2rem 1.5rem;
+  text-align: center;
+  transition: background 0.2s;
 }
-.stat-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(10,31,68,0.25); }
+.stat-card:hover { background: #fafbfc; }
 .stat-number {
-  font-size: 2.6rem; font-weight: 800; color: #ff6a00;
-  margin-bottom: 0.4rem; font-family: 'Poppins', sans-serif; line-height: 1;
+  font-family: 'Poppins', sans-serif;
+  font-size: 2.75rem; font-weight: 800; color: #ff6a00;
+  margin-bottom: 0.35rem; line-height: 1;
 }
-.stat-label { font-size: 0.88rem; opacity: 0.75; letter-spacing: 0.02em; }
+.stat-label { font-size: 0.82rem; color: #5a6a85; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 600; }
 
 /* Fade-up animation */
 [data-fade-about] {

@@ -190,8 +190,8 @@ async function submit() {
               <div class="check">✓</div>
               <h2>Request sent</h2>
               <p>
-                Thanks — your meeting request with <strong>{{ official.name }}</strong> is pending review.
-                We’ll follow up by email.
+                Thanks — your meeting request with <strong>{{ official.name }}</strong> was submitted.
+                They’ve been notified by email and will follow up shortly.
               </p>
               <button type="button" class="primary" @click="close">Done</button>
             </div>

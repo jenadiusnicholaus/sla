@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useFadeUp } from "@/composables/useFadeUp";
+import LandingHeader from "@/components/landing/LandingHeader.vue";
 
 interface GalleryImage {
   src: string;
@@ -25,14 +26,8 @@ interface GallerySection {
   images?: CmsGalleryImage[];
 }
 
-interface Stat {
-  value: string;
-  label: string;
-}
-
 const props = defineProps<{
   gallery?: GallerySection | null;
-  stats?: Stat[];
 }>();
 
 const DEFAULT_IMAGES: GalleryImage[] = [
@@ -45,13 +40,6 @@ const DEFAULT_IMAGES: GalleryImage[] = [
   { src: "/images/gallery_outdoor.png", alt: "Outdoor learning", label: "Outreach & Community Hub", color: "#0891b2" },
   { src: "/images/gallery_design.png", alt: "UX Design", label: "UI/UX & Creative Digital Arts", color: "#ff6a00" },
   { src: "/images/gallery_hackathon.png", alt: "Hackathon", label: "Hackathons & Tech Sprints", color: "#163566" },
-];
-
-const DEFAULT_STATS: [string, string][] = [
-  ["10K+", "Youth Empowered"],
-  ["36", "States Covered"],
-  ["50+", "Programs Run"],
-  ["98%", "Success Rate"],
 ];
 
 const imagePool = computed<GalleryImage[]>(() => {
@@ -101,22 +89,19 @@ const description = computed(
     props.gallery?.description ||
     "A living mosaic of moments — rows scroll endlessly left and right, showcasing the energy inside Street Labs.",
 );
-const displayStats = computed(() => {
-  if (props.stats?.length) return props.stats.map((s) => [s.value, s.label] as [string, string]);
-  return DEFAULT_STATS;
-});
 
 useFadeUp("[data-fade-gallery]");
 </script>
 
 <template>
-  <section class="gallery-section">
-    <div class="gallery-header" data-fade-gallery>
-      <span class="eyebrow">{{ eyebrow }}</span>
-      <h2 class="section-title">{{ title }}</h2>
-      <div class="title-bar"></div>
-      <p class="section-desc">{{ description }}</p>
-    </div>
+  <section id="gallery" class="gallery-section">
+    <LandingHeader
+      index="02"
+      :kicker="eyebrow"
+      :title="title"
+      :description="description"
+      data-fade-gallery
+    />
 
     <div class="marquee-gallery" aria-label="Scrolling image gallery">
       <div v-for="(row, rowIdx) in rows" :key="rowIdx" class="marquee-row">
@@ -145,17 +130,6 @@ useFadeUp("[data-fade-gallery]");
         </div>
       </div>
     </div>
-
-    <div class="gallery-stats" data-fade-gallery>
-      <div
-        v-for="[num, lbl] in displayStats"
-        :key="num"
-        class="gstat"
-      >
-        <span class="gstat-num">{{ num }}</span>
-        <span class="gstat-lbl">{{ lbl }}</span>
-      </div>
-    </div>
   </section>
 </template>
 
@@ -163,50 +137,14 @@ useFadeUp("[data-fade-gallery]");
 /* ── Section ─────────────────────────────────────────── */
 .gallery-section {
   background: #fff;
-  padding: 6rem 0 0;
+  padding: 6rem 0 3rem;
   overflow: hidden;
 }
 
-/* ── Header ──────────────────────────────────────────── */
-.gallery-header {
-  text-align: center;
+.gallery-section :deep(.landing-header) {
   padding: 0 2rem 3.5rem;
-  max-width: 680px;
+  max-width: 720px;
   margin: 0 auto;
-}
-.eyebrow {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: #ff6a00;
-  background: rgba(255, 106, 0, 0.08);
-  border: 1px solid rgba(255, 106, 0, 0.2);
-  padding: 0.35rem 1rem;
-  border-radius: 50px;
-  margin-bottom: 1rem;
-  font-family: "Poppins", sans-serif;
-}
-.section-title {
-  font-size: clamp(2rem, 4vw, 2.8rem);
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 0.75rem;
-  font-family: "Poppins", sans-serif;
-  letter-spacing: -0.02em;
-}
-.title-bar {
-  width: 48px;
-  height: 4px;
-  background: linear-gradient(90deg, #ff6a00, #0a7a3d);
-  margin: 0 auto 1.5rem;
-  border-radius: 2px;
-}
-.section-desc {
-  font-size: 0.98rem;
-  color: #64748b;
-  line-height: 1.75;
 }
 
 /* ── Marquee Wrapper ─────────────────────────────────── */
@@ -338,38 +276,6 @@ useFadeUp("[data-fade-gallery]");
   transform: translateY(0);
 }
 
-/* ── Stats Strip ─────────────────────────────────────── */
-.gallery-stats {
-  display: flex;
-  justify-content: center;
-  gap: 4rem;
-  padding: 3rem 2rem;
-  background: #fff;
-  border-top: 1px solid #f1f5f9;
-  flex-wrap: wrap;
-}
-.gstat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-}
-.gstat-num {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: #0f172a;
-  font-family: "Poppins", sans-serif;
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-.gstat-lbl {
-  font-size: 0.8rem;
-  color: #64748b;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
 /* ── Fade-up ─────────────────────────────────────────── */
 [data-fade-gallery] {
   opacity: 0;
@@ -394,12 +300,6 @@ useFadeUp("[data-fade-gallery]");
   .marquee-item {
     width: 150px;
     height: 110px;
-  }
-  .gallery-stats {
-    gap: 2rem;
-  }
-  .gstat-num {
-    font-size: 2rem;
   }
 }
 </style>

@@ -89,7 +89,7 @@ const primaryLabel = computed(() => props.hero?.primary_cta_label || 'Donate Now
 const secondaryLabel = computed(() => props.hero?.secondary_cta_label || 'Explore Programs ↓')
 const secondaryHref = computed(() => props.hero?.secondary_cta_href || '#services')
 const impactLabel = computed(() => props.hero?.impact_label || 'OUR IMPACT')
-const impactBadge = computed(() => props.hero?.impact_badge || '🏆 Best EdTech 2024')
+const impactBadge = computed(() => props.hero?.impact_badge || 'EdTech Recognition')
 const impactTitle = computed(() => props.hero?.impact_title || 'Digital Skills for Everyone')
 const impactSub = computed(
   () => props.hero?.impact_subtitle || 'Empowering communities. Building futures.',
@@ -154,14 +154,17 @@ const onPrimaryCta = () => {
         <div class="impact-card">
           <div class="impact-top">
             <span class="impact-label">{{ impactLabel }}</span>
-            <span class="impact-badge">{{ impactBadge }}</span>
+            <div class="recognition-stamp" aria-label="Recognition">
+              <span class="stamp-year">2024</span>
+              <span class="stamp-label">{{ impactBadge }}</span>
+            </div>
           </div>
           <h2 class="impact-title">{{ impactTitle }}</h2>
           <p class="impact-sub">{{ impactSub }}</p>
 
-          <div class="impact-tags">
-            <span class="tag" v-for="t in tags" :key="t">{{ t }}</span>
-          </div>
+          <ul class="impact-tags" aria-label="Focus areas">
+            <li v-for="t in tags" :key="t" class="impact-tag">{{ t }}</li>
+          </ul>
 
           <div class="impact-progress">
             <template v-for="(bar, i) in progressBars" :key="bar.label">
@@ -187,13 +190,6 @@ const onPrimaryCta = () => {
       <div class="bs green"></div>
       <div class="bs white"></div>
       <div class="bs orange"></div>
-    </div>
-
-    <!-- Scroll indicator -->
-    <div class="scroll-hint" aria-hidden="true">
-      <div class="scroll-mouse">
-        <div class="scroll-wheel"></div>
-      </div>
     </div>
   </section>
 </template>
@@ -274,9 +270,9 @@ const onPrimaryCta = () => {
 /* ── Typography ──────────────────────────────────────── */
 .hero-title {
   font-size: clamp(2.6rem, 5vw, 4.4rem);
-  font-weight: 800; line-height: 1.1;
+  font-weight: 800; line-height: 1.08;
   font-family: 'Poppins', sans-serif;
-  letter-spacing: -0.03em; margin-bottom: 1.5rem;
+  letter-spacing: -0.02em; margin-bottom: 1.5rem;
   text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
 }
 .hero-accent { color: #ff6a00; }
@@ -292,27 +288,27 @@ const onPrimaryCta = () => {
 
 .btn-primary {
   display: inline-flex; align-items: center; gap: 0.55rem;
-  background: linear-gradient(135deg, #ff6a00, #e04500);
+  background: #ff6a00;
   color: #fff; font-size: 1rem; font-weight: 700;
   font-family: 'Poppins', sans-serif;
-  padding: 1rem 2.4rem; border-radius: 50px;
+  padding: 1rem 2.4rem; border-radius: 6px;
   border: none; cursor: pointer;
-  box-shadow: 0 8px 30px rgba(255, 106, 0, 0.5);
-  transition: transform 0.25s, box-shadow 0.25s;
+  box-shadow: 0 4px 0 #c45200;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
 }
-.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(255, 106, 0, 0.6); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #c45200; background: #e85f00; }
 .btn-icon { width: 18px; height: 18px; }
 
 .btn-outline {
   display: inline-flex; align-items: center;
-  color: rgba(255, 255, 255, 0.85); font-size: 0.95rem; font-weight: 600;
+  color: rgba(255, 255, 255, 0.9); font-size: 0.95rem; font-weight: 600;
   font-family: 'Poppins', sans-serif;
-  padding: 1rem 2rem; border-radius: 50px;
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  padding: 1rem 2rem; border-radius: 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
   text-decoration: none;
-  transition: border-color 0.25s, color 0.25s, background 0.25s;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
-.btn-outline:hover { border-color: #ff6a00; color: #ff6a00; background: rgba(255, 106, 0, 0.07); }
+.btn-outline:hover { border-color: #fff; color: #fff; background: rgba(255, 255, 255, 0.08); }
 
 /* ── Stats ───────────────────────────────────────────── */
 .hero-stats { display: flex; gap: 2.5rem; }
@@ -322,36 +318,58 @@ const onPrimaryCta = () => {
 
 /* ── Impact card ─────────────────────────────────────── */
 .impact-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(20px);
-  border-radius: 24px; padding: 2.5rem;
-  transition: transform 0.3s;
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 2.25rem 2rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(4, 12, 32, 0.25);
+  transition: transform 0.25s, border-color 0.25s, background 0.25s;
 }
-.impact-card:hover { transform: translateY(-4px); }
-
-.impact-top  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
-.impact-label { font-size: 0.68rem; letter-spacing: 0.14em; color: rgba(255,255,255,0.38); font-weight: 700; text-transform: uppercase; }
-.impact-badge {
-  font-size: 0.72rem; font-weight: 600; color: #ff6a00;
-  background: rgba(255, 106, 0, 0.12);
-  padding: 0.2rem 0.7rem; border-radius: 20px;
-  border: 1px solid rgba(255, 106, 0, 0.25);
+.impact-card:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.24);
 }
-.impact-title { font-size: 2.1rem; font-weight: 800; line-height: 1.2; font-family: 'Poppins', sans-serif; margin-bottom: 0.5rem; }
-.impact-sub   { font-size: 0.88rem; color: rgba(255,255,255,0.45); margin-bottom: 1.5rem; }
+.impact-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 106, 0, 0.06) 0%, transparent 48%);
+  pointer-events: none;
+}
 
-.impact-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem; }
-.tag {
-  font-size: 0.78rem; font-weight: 500; font-family: 'Poppins', sans-serif;
-  padding: 0.28rem 0.9rem; border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.15); color: rgba(255, 255, 255, 0.65);
+.impact-top  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; position: relative; }
+.impact-label { font-size: 0.65rem; letter-spacing: 0.18em; color: rgba(255,255,255,0.45); font-weight: 600; text-transform: uppercase; }
+.impact-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 2rem; font-weight: 800; line-height: 1.15;
+  margin-bottom: 0.5rem; position: relative;
+}
+.impact-sub   { font-size: 0.88rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem; position: relative; }
+
+.impact-tags {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+  margin-bottom: 2rem; padding: 0; list-style: none;
+  position: relative;
+}
+.impact-tag {
+  font-size: 0.68rem; font-weight: 600; font-family: 'Poppins', sans-serif;
+  padding: 0.35rem 0.65rem; border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* Progress bars */
-.prog-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem; }
+.prog-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 0.5rem; position: relative; }
 .prog-val { font-weight: 700; color: #fff; }
-.prog-bar-bg { height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+.prog-bar-bg { height: 6px; background: rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden; position: relative; }
 .prog-bar { height: 100%; background: linear-gradient(90deg, #ff6a00, #ffad70); border-radius: 10px; transition: width 1.2s ease; }
 .prog-bar-green { background: linear-gradient(90deg, #0a7a3d, #2dd47a); }
 
@@ -361,26 +379,6 @@ const onPrimaryCta = () => {
 .bs.green  { background: #0a7a3d; }
 .bs.white  { background: rgba(255, 255, 255, 0.6); }
 .bs.orange { background: #ff6a00; }
-
-/* ── Scroll indicator ────────────────────────────────── */
-.scroll-hint {
-  position: absolute; bottom: 2.5rem; left: 50%;
-  transform: translateX(-50%);
-  z-index: 3; display: flex; flex-direction: column; align-items: center;
-  animation: scrollBounce 2s ease-in-out infinite;
-}
-.scroll-mouse {
-  width: 24px; height: 38px; border-radius: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  display: flex; justify-content: center; padding-top: 6px;
-}
-.scroll-wheel {
-  width: 4px; height: 8px; border-radius: 2px;
-  background: rgba(255, 255, 255, 0.5);
-  animation: scrollWheel 2s ease-in-out infinite;
-}
-@keyframes scrollWheel { 0%,100%{transform:translateY(0);opacity:1;} 50%{transform:translateY(8px);opacity:0;} }
-@keyframes scrollBounce { 0%,100%{transform:translateX(-50%) translateY(0);} 50%{transform:translateX(-50%) translateY(6px);} }
 
 /* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 1024px) {

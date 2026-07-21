@@ -1,0 +1,159 @@
+/* Street Labs Africa — landing page design tokens & shared patterns */
+
+.sla-website {
+  --landing-font: "Poppins", system-ui, sans-serif;
+  --landing-navy: #0a1f44;
+  --landing-navy-mid: #163566;
+  --landing-orange: #ff6a00;
+  --landing-green: #0a7a3d;
+  --landing-muted: #5a6a85;
+  --landing-surface: #f4f7fb;
+  --landing-line: rgba(10, 31, 68, 0.12);
+}
+
+/* ── Editorial section kicker (replaces pill eyebrows) ── */
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1.1rem;
+  font-family: var(--landing-font);
+}
+
+.section-kicker.align-center {
+  justify-content: center;
+}
+
+.section-kicker.align-left {
+  justify-content: flex-start;
+}
+
+.kicker-rule {
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.35;
+  flex-shrink: 0;
+}
+
+.kicker-index {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+  color: var(--kicker-accent, var(--landing-orange));
+}
+
+.kicker-text {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--landing-navy);
+  opacity: 0.72;
+}
+
+.section-kicker.accent-green {
+  --kicker-accent: var(--landing-green);
+}
+
+.section-kicker.accent-navy {
+  --kicker-accent: var(--landing-navy-mid);
+}
+
+/* ── Display headings ── */
+.landing-title {
+  font-family: var(--landing-font);
+  font-weight: 800;
+  font-size: clamp(2rem, 4.2vw, 2.85rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--landing-navy);
+  margin: 0 0 1rem;
+}
+
+.landing-lead {
+  font-family: var(--landing-font);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--landing-muted);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.landing-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.landing-header.align-left {
+  text-align: left;
+}
+
+.landing-header.align-left .landing-lead {
+  margin-left: 0;
+}
+
+/* ── Category / meta tags (sharp, not pills) ── */
+.meta-tag {
+  display: inline-block;
+  font-family: var(--landing-font);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.55rem;
+  border-radius: 3px;
+  border: 1px solid;
+  line-height: 1;
+}
+
+/* ── Recognition stamp (hero / awards) ── */
+.recognition-stamp {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  padding: 0.45rem 0.65rem;
+  border: 1.5px solid rgba(255, 106, 0, 0.45);
+  border-radius: 4px;
+  background: rgba(255, 106, 0, 0.06);
+  text-align: right;
+}
+
+.stamp-year {
+  font-family: var(--landing-font);
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--landing-orange);
+  font-weight: 800;
+}
+
+.stamp-label {
+  font-family: var(--landing-font);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  max-width: 9rem;
+  line-height: 1.35;
+}
+
+/* ── Icon tile for cards ── */
+.icon-tile {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid var(--tile-border, rgba(10, 31, 68, 0.1));
+  background: var(--tile-bg, rgba(10, 31, 68, 0.04));
+  color: var(--tile-color, var(--landing-navy));
+}
+
+.icon-tile :deep(svg) {
+  width: 22px;
+  height: 22px;
+}

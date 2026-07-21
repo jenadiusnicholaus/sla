@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { DEFAULT_LANDING_NAV, sortNavByLandingOrder } from '@/lib/landingNav'
 
 interface NavLink {
   label: string
@@ -33,20 +34,15 @@ const emit = defineEmits<{
   (e: 'open-donate'): void
 }>()
 
-const DEFAULT_NAV: NavLink[] = [
-  { label: 'Home', href: '#home' },
-  { label: 'About', href: '#about' },
-  { label: 'Programs', href: '#services' },
-  { label: 'Values', href: '#values' },
-  { label: 'Team', href: '#team' },
-  { label: 'Contact', href: '#contact' },
-]
+const DEFAULT_NAV = DEFAULT_LANDING_NAV
 
 const isMenuOpen = ref(false)
 const isScrolled = ref(false)
 const announcementVisible = ref(true)
 
-const navLinks = computed(() => (props.nav?.length ? props.nav : DEFAULT_NAV))
+const navLinks = computed(() =>
+  sortNavByLandingOrder(props.nav?.length ? props.nav : DEFAULT_NAV),
+)
 const logoSrc = computed(
   () => props.settings?.logo || '/images/STREET_DIGITAL_LABS_AFRICA_WITH_WORD.png',
 )
@@ -85,7 +81,7 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   <div class="header-wrap">
     <div class="announcement-bar" v-if="showAnnouncement">
       <span class="ann-pulse"></span>
-      <p>🌍 {{ annMessage }}
+      <p> {{ annMessage }}
         <button @click="onAnnouncementCta" class="ann-cta">{{ annCta }}</button>
       </p>
       <button
@@ -155,7 +151,10 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
               @click="() => { isMenuOpen = false; emit('open-donate') }"
               id="mobile-donate-btn"
             >
-              ❤️ Donate Now
+              <svg class="heart-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 21.593c-5.63-5.539-11-10.297-11-14.402 0-3.791 3.068-5.191 5.281-5.191 1.312 0 4.151.501 5.719 4.457 1.59-3.968 4.464-4.447 5.726-4.447 2.54 0 5.274 1.621 5.274 5.181 0 4.069-5.136 8.625-11 14.402z"/>
+              </svg>
+              Donate Now
             </button>
           </div>
         </div>
@@ -249,14 +248,13 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   flex-shrink: 0;
   background: #ffffff;
   padding: 0.4rem 0.9rem 0.4rem 0.4rem;
-  border-radius: 50px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.08);
-  border: 1px solid rgba(255,255,255,0.9);
-  transition: box-shadow 0.25s, transform 0.25s;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  border: 1px solid rgba(10, 31, 68, 0.08);
+  transition: box-shadow 0.2s;
 }
 .logo:hover {
-  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 }
 .logo-img-wrap {
   width: 46px; height: 46px;
@@ -307,36 +305,23 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 /* ── Animated border donate button ───────────────────── */
 .donate-border-wrap {
   position: relative;
-  border-radius: 50px;
-  padding: 2px;
-  background: conic-gradient(
-    from var(--angle, 0deg),
-    #ff6a00, #ffffff, #0a7a3d, #ffffff, #ff6a00
-  );
-  animation: spin-border 2.5s linear infinite;
-}
-@property --angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-@keyframes spin-border {
-  to { --angle: 360deg; }
+  border-radius: 6px;
+  padding: 1px;
+  background: rgba(255, 106, 0, 0.55);
 }
 .donate-btn {
   display: inline-flex; align-items: center; gap: 0.5rem;
-  background: linear-gradient(135deg, #ff6a00 0%, #e84a00 100%);
+  background: #ff6a00;
   color: white; font-size: 0.9rem; font-weight: 700;
   font-family: 'Poppins', sans-serif;
-  padding: 0.65rem 1.6rem; border-radius: 50px;
+  padding: 0.65rem 1.6rem; border-radius: 5px;
   border: none; cursor: pointer;
   position: relative; z-index: 1;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 20px rgba(255, 106, 0, 0.4);
+  transition: transform 0.2s, background 0.2s;
   white-space: nowrap; letter-spacing: 0.01em;
   width: 100%;
 }
-.donate-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255, 106, 0, 0.5); }
+.donate-btn:hover { transform: translateY(-1px); background: #e85f00; }
 .donate-btn-full {
   width: 100%; justify-content: center;
   border-radius: 12px; margin-top: 1rem;

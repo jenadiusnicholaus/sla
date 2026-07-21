@@ -32,7 +32,6 @@ const {
 
 const heroStats = statsFor("hero");
 const aboutStats = statsFor("about");
-const galleryStats = statsFor("gallery");
 const headerNav = navFor("header");
 const footerNav = navFor("footer");
 
@@ -52,7 +51,7 @@ useLiveHomepage();
       :stats="heroStats"
       @open-donate="showDonateModal = true"
     />
-    <ImageGallery :gallery="gallery" :stats="galleryStats" />
+    <ImageGallery :gallery="gallery" />
     <About :about="about" :stats="aboutStats" />
     <BrandValues :values="values" />
     <Services :programs="programs" />
@@ -75,7 +74,8 @@ useLiveHomepage();
 </template>
 
 <style>
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+@import "../styles/landing.css";
 
 *,
 *::before,
@@ -95,7 +95,7 @@ body {
 }
 
 .sla-website {
-  font-family: "Poppins", "Inter", sans-serif;
+  font-family: "Poppins", system-ui, sans-serif;
   min-height: 100vh;
   background: #f5f7fa;
 }

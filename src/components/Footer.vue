@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { cmsApi } from "@/api/client";
+import { DEFAULT_LANDING_NAV, sortNavByLandingOrder } from "@/lib/landingNav";
 
 interface FooterLink {
   label: string;
@@ -35,16 +36,13 @@ const props = defineProps<{
   socialLinks?: SocialLink[];
 }>();
 
-const DEFAULT_LINKS: FooterLink[] = [
-  { label: "Home", href: "#home" },
-  { label: "About Us", href: "#about" },
-  { label: "Programs", href: "#services" },
-  { label: "Values", href: "#values" },
-  { label: "Team", href: "#team" },
-  { label: "Contact", href: "#contact" },
-];
+const DEFAULT_LINKS = DEFAULT_LANDING_NAV.map((link) =>
+  link.href === '#about' ? { ...link, label: 'About Us' } : link,
+)
 
-const quickLinks = computed(() => (props.nav?.length ? props.nav : DEFAULT_LINKS));
+const quickLinks = computed(() =>
+  sortNavByLandingOrder(props.nav?.length ? props.nav : DEFAULT_LINKS),
+)
 const currentYear = new Date().getFullYear();
 const logoSrc = computed(
   () => props.settings?.logo || "/images/STREET_DIGITAL_LABS_AFRICA_WITH_WORD.png",

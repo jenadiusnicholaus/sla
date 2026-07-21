@@ -1,5 +1,6 @@
 import { ref, computed, readonly, onMounted, onUnmounted } from 'vue'
 import { cmsApi } from '@/api/client'
+import { sortNavByLandingOrder } from '@/lib/landingNav'
 
 const CHANNEL = 'sla-cms-updated'
 const STORAGE_KEY = 'sla_cms_updated_at'
@@ -187,9 +188,11 @@ export function useHomepageCms() {
 
   function navFor(placement) {
     return computed(() =>
-      (homepage.value?.nav ?? [])
-        .filter((n) => n.placement === placement || n.placement === 'both')
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+      sortNavByLandingOrder(
+        (homepage.value?.nav ?? [])
+          .filter((n) => n.placement === placement || n.placement === 'both')
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+      ),
     )
   }
 

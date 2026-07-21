@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useFadeUp } from '@/composables/useFadeUp'
+import LandingHeader from '@/components/landing/LandingHeader.vue'
+import LandingIcon from '@/components/landing/LandingIcon.vue'
 
 interface Program {
   emoji: string
@@ -62,12 +64,14 @@ useFadeUp('[data-fade-svc]')
 <template>
   <section id="services" class="services">
     <div class="container">
-      <div class="section-header" data-fade-svc>
-        <span class="eyebrow">What We Do</span>
-        <h2 class="section-title">Our Programs</h2>
-        <div class="title-bar"></div>
-        <p class="section-desc">Comprehensive digital skills solutions tailored to empower African communities and create lasting change.</p>
-      </div>
+      <LandingHeader
+        index="05"
+        kicker="What We Do"
+        title="Our Programs"
+        description="Comprehensive digital skills solutions tailored to empower African communities and create lasting change."
+        accent="navy"
+        data-fade-svc
+      />
 
       <div class="programs-grid">
         <article
@@ -76,9 +80,14 @@ useFadeUp('[data-fade-svc]')
           class="program-card"
           data-fade-svc
         >
-          <div class="card-top" :style="{ borderTopColor: program.tagColor }">
-            <div class="program-emoji">{{ program.emoji }}</div>
-            <span class="program-tag" :style="{ color: program.tagColor, background: program.tagColor + '18', borderColor: program.tagColor + '44' }">
+          <div class="card-top">
+            <div class="program-icon">
+              <LandingIcon :emoji="program.emoji" />
+            </div>
+            <span
+              class="meta-tag program-tag"
+              :style="{ color: program.tagColor, borderColor: program.tagColor + '55', background: program.tagColor + '0d' }"
+            >
               {{ program.tag }}
             </span>
           </div>
@@ -98,59 +107,55 @@ useFadeUp('[data-fade-svc]')
 
 .container { max-width: 1200px; margin: 0 auto; padding: 3rem 0.5rem; }
 
-.section-header { text-align: center; margin-bottom: 4rem; }
-.eyebrow {
-  display: inline-block; font-size: 0.75rem; font-weight: 700;
-  letter-spacing: 0.14em; text-transform: uppercase;
-  color: #163566; background: rgba(22,53,102,0.08);
-  border: 1px solid rgba(22,53,102,0.18);
-  padding: 0.3rem 1rem; border-radius: 50px;
-  margin-bottom: 1rem; font-family: 'Poppins', sans-serif;
-}
-.section-title {
-  font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; color: #0a1f44;
-  margin-bottom: 0.75rem; font-family: 'Poppins', sans-serif; letter-spacing: -0.02em;
-}
-.title-bar {
-  width: 56px; height: 4px;
-  background: linear-gradient(90deg, #ff6a00, #0a7a3d);
-  margin: 0 auto 1.5rem; border-radius: 2px;
-}
-.section-desc { font-size: 1.05rem; color: #5a6a85; max-width: 650px; margin: 0 auto; line-height: 1.8; }
-
 /* Grid */
 .programs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 2rem;
+  gap: 1.25rem;
 }
 
 /* Card */
 .program-card {
-  background: white; border-radius: 20px;
-  padding: 2rem; display: flex; flex-direction: column; gap: 0.75rem;
-  box-shadow: 0 2px 16px rgba(10,31,68,0.07);
-  border: 1px solid rgba(10,31,68,0.06);
-  transition: transform 0.3s, box-shadow 0.3s;
+  background: white;
+  border-radius: 6px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid rgba(10,31,68,0.08);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.program-card:hover { transform: translateY(-8px); box-shadow: 0 20px 50px rgba(10,31,68,0.12); }
+.program-card:hover {
+  border-color: rgba(10,31,68,0.14);
+  box-shadow: 0 10px 28px rgba(10,31,68,0.07);
+}
 
-.card-top { display: flex; justify-content: space-between; align-items: flex-start; border-top: 4px solid; border-radius: 4px; padding-top: 1.25rem; }
-.program-emoji { font-size: 2.4rem; }
-.program-tag {
-  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
-  padding: 0.28rem 0.85rem; border-radius: 20px; border: 1px solid;
-  font-family: 'Poppins', sans-serif; white-space: nowrap;
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.program-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  border: 1px solid rgba(10, 31, 68, 0.1);
+  background: rgba(10, 31, 68, 0.03);
+  color: #0a1f44;
+  display: grid;
+  place-items: center;
 }
-.program-title { font-size: 1.15rem; font-weight: 700; color: #0a1f44; font-family: 'Poppins', sans-serif; line-height: 1.3; }
+.program-icon :deep(svg) { width: 22px; height: 22px; }
+.program-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.25rem; font-weight: 700; color: #0a1f44; line-height: 1.3;
+}
 .program-desc  { font-size: 0.9rem; color: #5a6a85; line-height: 1.75; flex: 1; }
 .learn-more {
-  font-size: 0.88rem; font-weight: 700; text-decoration: none;
+  font-size: 0.82rem; font-weight: 700; text-decoration: none;
   font-family: 'Poppins', sans-serif;
-  transition: letter-spacing 0.2s;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: opacity 0.2s;
   align-self: flex-start;
 }
-.learn-more:hover { letter-spacing: 0.02em; }
+.learn-more:hover { opacity: 0.7; }
 
 /* Fade-up */
 [data-fade-svc] {

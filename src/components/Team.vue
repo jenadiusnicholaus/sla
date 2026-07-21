@@ -2,6 +2,8 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useFadeUp } from '@/composables/useFadeUp'
 import OfficialPreviewModal, { type Official } from '@/components/OfficialPreviewModal.vue'
+import LandingHeader from '@/components/landing/LandingHeader.vue'
+import SectionKicker from '@/components/landing/SectionKicker.vue'
 
 interface OrgNode {
   title: string
@@ -228,12 +230,13 @@ onUnmounted(() => clearAuto())
     <div class="container">
       <div class="section-header" data-fade-team>
         <img :src="logoSrc" :alt="logoAlt" class="team-logo" />
-        <span class="eyebrow">Leadership</span>
-        <h2 class="section-title">Our Team Structure</h2>
-        <div class="title-bar"></div>
-        <p class="section-desc">
-          The dedicated leaders driving digital transformation across Africa.
-        </p>
+        <LandingHeader
+          index="06"
+          kicker="Leadership"
+          title="Our Team Structure"
+          description="The dedicated leaders driving digital transformation across Africa."
+          accent="green"
+        />
       </div>
 
       <div class="org-chart" data-fade-team>
@@ -276,15 +279,15 @@ onUnmounted(() => clearAuto())
           </div>
         </div>
 
-        <div class="branch-connector">
+        <div class="branch-connector" :style="{ '--director-cols': directorCards.length }">
           <div class="branch-v-top"></div>
-          <div class="branch-h"></div>
-          <div class="branch-dots">
+          <div class="branch-rail">
+            <div class="branch-h" aria-hidden="true"></div>
             <span v-for="n in directorCards.length" :key="n" class="branch-dot"></span>
           </div>
         </div>
 
-        <div class="level level-4">
+        <div class="level level-4" :style="{ '--director-cols': directorCards.length }">
           <div
             v-for="dir in directorCards"
             :key="dir.title"
@@ -303,7 +306,7 @@ onUnmounted(() => clearAuto())
     <!-- Meet the Team — featured slider -->
     <div class="meet-slider" data-fade-team>
       <div class="meet-intro">
-        <span class="eyebrow">People</span>
+        <SectionKicker label="People" align="center" accent="orange" />
         <h3 class="meet-title">Meet Our Team</h3>
         <p class="meet-sub">The passionate people behind Street Digital Labs Africa.</p>
       </div>
@@ -417,6 +420,9 @@ onUnmounted(() => clearAuto())
   text-align: center;
   margin-bottom: 3rem;
 }
+.section-header :deep(.landing-header) {
+  margin-bottom: 0;
+}
 .team-logo {
   width: 80px;
   height: 80px;
@@ -424,43 +430,8 @@ onUnmounted(() => clearAuto())
   margin: 0 auto 1.5rem;
   display: block;
 }
-.eyebrow {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #0a7a3d;
-  background: rgba(10, 122, 61, 0.08);
-  border: 1px solid rgba(10, 122, 61, 0.2);
-  padding: 0.3rem 1rem;
-  border-radius: 50px;
-  margin-bottom: 1rem;
-  font-family: 'Poppins', sans-serif;
-}
-.section-title {
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-  font-weight: 800;
-  color: #0a1f44;
-  margin-bottom: 0.75rem;
-  font-family: 'Poppins', sans-serif;
-}
-.title-bar {
-  width: 56px;
-  height: 4px;
-  background: linear-gradient(90deg, #ff6a00, #0a7a3d);
-  margin: 0 auto 1.25rem;
-  border-radius: 2px;
-}
-.section-desc {
-  font-size: 1rem;
-  color: #5a6a85;
-  max-width: 560px;
-  margin: 0 auto;
-  line-height: 1.7;
-}
 
-/* Org chart (unchanged structure) */
+/* Org chart */
 .org-chart {
   display: flex;
   flex-direction: column;
@@ -562,27 +533,30 @@ onUnmounted(() => clearAuto())
   height: 30px;
   background: #0a7a3d;
 }
-.branch-h {
+.branch-rail {
   width: 90%;
+  display: grid;
+  grid-template-columns: repeat(var(--director-cols, 6), 1fr);
+  align-items: start;
+}
+.branch-h {
+  grid-column: 1 / -1;
   height: 2px;
   background: #0a7a3d;
-}
-.branch-dots {
-  width: 90%;
-  display: flex;
-  justify-content: space-between;
-  margin-top: -1px;
+  width: calc(100% * (var(--director-cols, 6) - 1) / var(--director-cols, 6));
+  margin-left: calc(100% / var(--director-cols, 6) / 2);
 }
 .branch-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: #0a7a3d;
+  justify-self: center;
   margin-top: -4px;
 }
 .level-4 {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(var(--director-cols, 6), 1fr);
   gap: 0.75rem;
   width: 90%;
   margin-top: 0.5rem;
@@ -632,10 +606,8 @@ onUnmounted(() => clearAuto())
   position: relative;
   margin-top: 1rem;
   padding: 2.5rem 0 0;
-  background:
-    radial-gradient(ellipse at 20% 0%, rgba(255, 106, 0, 0.08), transparent 45%),
-    radial-gradient(ellipse at 85% 30%, rgba(10, 122, 61, 0.08), transparent 40%),
-    linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+  background: #f4f7fb;
+  border-top: 1px solid rgba(10, 31, 68, 0.06);
   overflow: hidden;
 }
 .meet-intro {
@@ -645,11 +617,11 @@ onUnmounted(() => clearAuto())
   padding: 0 1rem;
 }
 .meet-title {
-  margin: 0.35rem 0;
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin: 0.5rem 0 0.35rem;
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(1.75rem, 3vw, 2.35rem);
   font-weight: 800;
   color: #0a1f44;
-  font-family: 'Poppins', sans-serif;
 }
 .meet-sub {
   margin: 0;
@@ -702,11 +674,11 @@ onUnmounted(() => clearAuto())
 }
 .featured-name {
   margin: 0;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: #0a1f44;
   font-family: 'Poppins', sans-serif;
+  font-size: clamp(2.2rem, 5vw, 3.2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0a1f44;
   line-height: 1.1;
 }
 .featured-role {
@@ -807,7 +779,7 @@ onUnmounted(() => clearAuto())
 }
 .thumb {
   flex: 1 0 auto;
-  min-width: 140px;
+  min-width: 120px;
   max-width: 180px;
   display: flex;
   flex-direction: column;
@@ -951,13 +923,26 @@ onUnmounted(() => clearAuto())
   transform: translateY(0);
 }
 
+@media (min-width: 1100px) {
+  .thumb-rail {
+    left: 1.25rem;
+    right: 1.25rem;
+    justify-content: center;
+    overflow-x: visible;
+  }
+  .thumb {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 180px;
+  }
+}
+
 @media (max-width: 900px) {
   .level-4 {
     grid-template-columns: repeat(3, 1fr);
     width: 100%;
   }
-  .branch-h,
-  .branch-dots {
+  .branch-rail {
     width: 100%;
   }
   .featured {
@@ -1001,8 +986,7 @@ onUnmounted(() => clearAuto())
     min-width: 220px;
     max-width: 100%;
   }
-  .branch-dots,
-  .branch-h {
+  .branch-rail {
     display: none;
   }
   .nav-arrow {

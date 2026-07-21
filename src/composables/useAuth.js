@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { authApi, clearTokens, setTokens } from '@/api/client'
+import { stopIdleSession } from '@/composables/useIdleSession'
 
 const user = ref(JSON.parse(localStorage.getItem('sla_user') || 'null'))
 const loading = ref(false)
@@ -36,6 +37,7 @@ export function useAuth() {
   }
 
   function logout() {
+    stopIdleSession()
     clearTokens()
     user.value = null
   }

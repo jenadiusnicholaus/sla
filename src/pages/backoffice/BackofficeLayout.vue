@@ -1,9 +1,12 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
+import { useIdleSession } from '@/composables/useIdleSession'
+import SessionTimeoutDialog from '@/components/backoffice/SessionTimeoutDialog.vue'
 
 const { user, logout } = useAuth()
+const { showWarning, secondsLeft, start, stop, stayLoggedIn, confirmLogout } = useIdleSession()
 const router = useRouter()
 const route = useRoute()
 const search = ref('')
@@ -35,9 +38,23 @@ function go(to) {
 }
 
 function signOut() {
+  stop()
   logout()
   router.push('/backoffice/login')
 }
+
+function handleSessionExpired() {
+  logout()
+  router.push('/backoffice/login')
+}
+
+onMounted(() => {
+  start({ onExpire: handleSessionExpired })
+})
+
+onUnmounted(() => {
+  stop()
+})
 
 const initials = computed(() => {
   const name = user.value?.first_name || user.value?.username || 'A'
@@ -158,6 +175,13 @@ const displayName = computed(
       class="backdrop"
       aria-label="Close menu"
       @click="mobileOpen = false"
+    />
+
+    <SessionTimeoutDialog
+      :open="showWarning"
+      :seconds-left="secondsLeft"
+      @stay="stayLoggedIn"
+      @logout="confirmLogout"
     />
   </div>
 </template>

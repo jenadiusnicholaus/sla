@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { cmsApi } from "@/api/client";
+import LandingHeader from "@/components/landing/LandingHeader.vue";
 
 interface Settings {
   address?: string;
@@ -32,11 +33,11 @@ const props = defineProps<{
 }>();
 
 const contactItems = computed(() => [
-  { icon: "📍", label: "Address", value: props.settings?.address || "Morogoro, Tanzania" },
-  { icon: "📞", label: "Phone", value: props.settings?.phone || "+255 800 123 456" },
-  { icon: "✉️", label: "Email", value: props.settings?.email || "info@streetlabsafrica.org" },
+  { type: "location", label: "Address", value: props.settings?.address || "Morogoro, Tanzania" },
+  { type: "phone", label: "Phone", value: props.settings?.phone || "+255 800 123 456" },
+  { type: "email", label: "Email", value: props.settings?.email || "info@streetlabsafrica.org" },
   {
-    icon: "🌐",
+    type: "web",
     label: "Website",
     value: props.settings?.website_display || "streetlabsafrica.org",
   },
@@ -83,14 +84,12 @@ const sendMessage = async (): Promise<void> => {
 <template>
   <section id="contact" class="contact">
     <div class="container">
-      <div class="section-header">
-        <span class="eyebrow">Get In Touch</span>
-        <h2 class="section-title">Contact Us</h2>
-        <div class="title-bar"></div>
-        <p class="section-desc">
-          Ready to join the digital revolution? We'd love to hear from you.
-        </p>
-      </div>
+      <LandingHeader
+        index="07"
+        kicker="Get In Touch"
+        title="Contact Us"
+        description="Ready to join the digital revolution? We'd love to hear from you."
+      />
 
       <div class="contact-grid">
         <div class="contact-info">
@@ -106,7 +105,12 @@ const sendMessage = async (): Promise<void> => {
               :key="item.label"
               class="info-item"
             >
-              <div class="info-icon">{{ item.icon }}</div>
+              <div class="info-icon" aria-hidden="true">
+                <svg v-if="item.type === 'location'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <svg v-else-if="item.type === 'phone'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <svg v-else-if="item.type === 'email'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+              </div>
               <div>
                 <strong>{{ item.label }}</strong>
                 <p>{{ item.value }}</p>
@@ -182,7 +186,7 @@ const sendMessage = async (): Promise<void> => {
               ></textarea>
             </div>
             <p v-if="sendError" class="send-error" role="alert">
-              ⚠️ {{ sendError }}
+              {{ sendError }}
             </p>
             <button class="btn-send" :disabled="isSending" @click="sendMessage">
               <span v-if="isSending" class="spinner"></span>
@@ -191,7 +195,9 @@ const sendMessage = async (): Promise<void> => {
           </template>
 
           <div v-else class="sent-success">
-            <div class="sent-icon">✅</div>
+            <div class="sent-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+            </div>
             <h3>Message Sent!</h3>
             <p>
               Thank you for reaching out. We'll get back to you within 24 hours.
@@ -213,45 +219,8 @@ const sendMessage = async (): Promise<void> => {
   padding: 3rem 0.5rem;
 }
 
-.section-header {
-  text-align: center;
-  margin-bottom: 4rem;
-}
-.eyebrow {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #ff6a00;
-  background: rgba(255, 106, 0, 0.08);
-  border: 1px solid rgba(255, 106, 0, 0.2);
-  padding: 0.3rem 1rem;
-  border-radius: 50px;
-  margin-bottom: 1rem;
-  font-family: "Poppins", sans-serif;
-}
-.section-title {
-  font-size: clamp(2rem, 4vw, 2.8rem);
-  font-weight: 800;
-  color: #0a1f44;
-  margin-bottom: 0.75rem;
-  font-family: "Poppins", sans-serif;
-  letter-spacing: -0.02em;
-}
-.title-bar {
-  width: 56px;
-  height: 4px;
-  background: linear-gradient(90deg, #ff6a00, #0a7a3d);
-  margin: 0 auto 1.5rem;
-  border-radius: 2px;
-}
-.section-desc {
-  font-size: 1.05rem;
-  color: #5a6a85;
-  max-width: 600px;
-  margin: 0 auto;
-  line-height: 1.8;
+.container :deep(.landing-header) {
+  margin-bottom: 3.5rem;
 }
 
 /* Grid */
@@ -264,17 +233,18 @@ const sendMessage = async (): Promise<void> => {
 
 /* Info panel */
 .contact-info {
-  background: linear-gradient(160deg, #0a1f44 0%, #163566 100%);
+  background: #0a1f44;
   color: white;
-  padding: 2.5rem;
-  border-radius: 20px;
+  padding: 2.25rem;
+  border-radius: 6px;
   position: relative;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 .info-heading {
-  font-size: 1.4rem;
-  font-weight: 800;
   font-family: "Poppins", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
   margin-bottom: 0.5rem;
 }
 .info-sub {
@@ -296,9 +266,19 @@ const sendMessage = async (): Promise<void> => {
   gap: 1rem;
 }
 .info-icon {
-  font-size: 1.4rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
-  margin-top: 2px;
+  color: #ff6a00;
+}
+.info-icon svg {
+  width: 16px;
+  height: 16px;
 }
 .info-item strong {
   display: block;

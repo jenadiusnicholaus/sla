@@ -112,6 +112,7 @@ const teamForm = reactive({
   name: '',
   role: '',
   initials: '',
+  email: '',
   bio: '',
   photo: null,
   photoPreview: '',
@@ -176,6 +177,7 @@ function resetTeamForm() {
     name: '',
     role: '',
     initials: '',
+    email: '',
     bio: '',
     photo: null,
     photoPreview: '',
@@ -546,6 +548,7 @@ async function saveTeam() {
     body.append('name', teamForm.name)
     body.append('role', teamForm.role)
     body.append('initials', teamForm.initials || '')
+    body.append('email', teamForm.email || '')
     body.append('bio', teamForm.bio || '')
     body.append('order', String(teamForm.order ?? 0))
     body.append('is_published', teamForm.is_published ? 'true' : 'false')
@@ -571,6 +574,7 @@ function editTeam(item) {
     name: item.name || '',
     role: item.role || '',
     initials: item.initials || '',
+    email: item.email || '',
     bio: item.bio || '',
     photo: item.photo || null,
     photoPreview: item.photo || '',
@@ -1018,9 +1022,18 @@ onMounted(load)
               <Input id="team-initials" v-model="teamForm.initials" placeholder="MM" maxlength="4" />
             </div>
             <div class="field">
-              <Label for="team-order">Order</Label>
-              <Input id="team-order" v-model.number="teamForm.order" type="number" min="0" />
+              <Label for="team-email">Email (meeting notifications)</Label>
+              <Input
+                id="team-email"
+                v-model="teamForm.email"
+                type="email"
+                placeholder="official@streetlabsafrica.org"
+              />
             </div>
+          </div>
+          <div class="field">
+            <Label for="team-order">Order</Label>
+            <Input id="team-order" v-model.number="teamForm.order" type="number" min="0" />
           </div>
           <div class="field">
             <Label for="team-bio">Bio</Label>

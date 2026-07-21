@@ -6,7 +6,7 @@ Vue 3 site for [streetlabsafrica.org](https://streetlabsafrica.org/) plus the **
 
 ```bash
 # Terminal 1 — backend
-cd ../backend
+cd ../sla-backend
 source .venv/bin/activate
 python manage.py runserver
 
@@ -39,3 +39,13 @@ Every physical QR should encode:
 `https://streetlabsafrica.org/qr/{CODE}`
 
 The backend resolves the live destination (hub actions, profile, project, event, URL) without reprinting codes.
+
+## Shared UI components
+
+Reusable primitives live in `src/components/ui/` (shadcn-vue style). Theme tokens are in `src/assets/ui.css`.
+
+```vue
+import { Button, Input, Card, CardContent } from '@/components/ui'
+```
+
+Add more via the CLI (Node 22+): `npx shadcn-vue@latest add dialog`. See `src/components/ui/README.md`.

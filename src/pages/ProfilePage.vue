@@ -34,7 +34,6 @@ onMounted(async () => {
 
       <div class="links">
         <a v-if="profile.website" :href="profile.website" target="_blank" rel="noopener">Website</a>
-        <a v-if="profile.meeting_url" :href="profile.meeting_url" target="_blank" rel="noopener">Book Meeting</a>
         <a v-if="profile.vcard_enabled" :href="profileApi.vcardUrl(profile.username)">Download Contact</a>
         <a
           v-for="link in profile.social_links.filter((l) => l.is_active)"

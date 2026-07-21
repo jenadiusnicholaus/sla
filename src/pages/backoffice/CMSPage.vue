@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { cmsApi } from '@/api/client'
 import { invalidateHomepageCms } from '@/composables/useHomepageCms'
 import ImageCropModal from '@/components/ImageCropModal.vue'
+import { FormDialog, DataTable, Input, Label, Separator, Textarea } from '@/components/ui'
 
 const tabs = [
   'settings',
@@ -38,6 +39,10 @@ const cropSrc = ref('')
 const cropFileName = ref('photo.jpg')
 const cropTarget = ref('gallery') // gallery | poster
 const photoInput = ref(null)
+const programDialogOpen = ref(false)
+const teamDialogOpen = ref(false)
+const valueDialogOpen = ref(false)
+const imageDialogOpen = ref(false)
 const cropShape = computed(() => 'rect')
 const cropTitle = computed(() => {
   if (cropTarget.value === 'gallery') return 'Crop gallery image'
@@ -130,6 +135,41 @@ const sortedGalleryImages = computed(() =>
   [...galleryImages.value].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
 )
 
+const programColumns = [
+  { key: 'emoji', label: '', width: '48px' },
+  { key: 'title', label: 'Program', width: '1.5fr' },
+  { key: 'tag', label: 'Tag', width: '0.9fr' },
+  { key: 'order', label: 'Order', width: '72px' },
+  { key: 'status', label: 'Status', width: '88px' },
+]
+
+const teamColumns = [
+  { key: 'photo', label: '', width: '64px' },
+  { key: 'name', label: 'Name', width: '1.2fr' },
+  { key: 'role', label: 'Role', width: '1fr' },
+  { key: 'meetings', label: 'Meetings', width: '100px' },
+  { key: 'status', label: 'Status', width: '88px' },
+]
+
+const valueColumns = [
+  { key: 'emoji', label: '', width: '48px' },
+  { key: 'title', label: 'Value', width: '1.4fr' },
+  { key: 'order', label: 'Order', width: '72px' },
+  { key: 'status', label: 'Status', width: '88px' },
+]
+
+const galleryColumns = [
+  { key: 'image', label: '', width: '72px' },
+  { key: 'label', label: 'Label', width: '1.4fr' },
+  { key: 'order', label: 'Order', width: '72px' },
+  { key: 'status', label: 'Status', width: '88px' },
+]
+
+function isActiveStatus(item) {
+  if (item.is_published != null) return item.is_published !== false
+  return item.is_active !== false
+}
+
 function resetTeamForm() {
   Object.assign(teamForm, {
     id: null,
@@ -144,6 +184,51 @@ function resetTeamForm() {
     is_published: true,
     accepts_meetings: true,
   })
+}
+
+function resetProgramForm() {
+  Object.assign(programForm, {
+    id: null,
+    title: '',
+    description: '',
+    emoji: '💻',
+    tag: '',
+    tag_color: '#ff6a00',
+    order: 0,
+    is_active: true,
+  })
+}
+
+function resetValueForm() {
+  Object.assign(valueForm, {
+    id: null,
+    title: '',
+    description: '',
+    emoji: '💡',
+    color: '#ff6a00',
+    order: 0,
+    is_active: true,
+  })
+}
+
+function openCreateProgram() {
+  resetProgramForm()
+  programDialogOpen.value = true
+}
+
+function openCreateTeam() {
+  resetTeamForm()
+  teamDialogOpen.value = true
+}
+
+function openCreateValue() {
+  resetValueForm()
+  valueDialogOpen.value = true
+}
+
+function openCreateImage() {
+  resetImageForm()
+  imageDialogOpen.value = true
 }
 
 function resetImageForm() {
@@ -392,6 +477,7 @@ async function saveGalleryImage() {
 
     await cmsApi.saveGalleryImage(imageForm.id, body)
     resetImageForm()
+    imageDialogOpen.value = false
     await load()
     await notifyLanding()
     status.value = 'Gallery image saved'
@@ -414,6 +500,7 @@ function editGalleryImage(item) {
     imagePreview: item.image || '',
     imageFile: null,
   })
+  imageDialogOpen.value = true
 }
 
 async function deleteGalleryImage(id) {
@@ -425,22 +512,24 @@ async function deleteGalleryImage(id) {
 }
 
 async function saveProgram() {
-  await cmsApi.saveProgram(programForm.id, { ...programForm })
-  Object.assign(programForm, {
-    id: null,
-    title: '',
-    description: '',
-    emoji: '💻',
-    tag: '',
-    order: 0,
-  })
-  await load()
-  await notifyLanding()
-  status.value = 'Program saved'
+  saving.value = true
+  try {
+    await cmsApi.saveProgram(programForm.id, { ...programForm })
+    resetProgramForm()
+    programDialogOpen.value = false
+    await load()
+    await notifyLanding()
+    status.value = 'Program saved'
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    saving.value = false
+  }
 }
 
-async function editProgram(item) {
+function editProgram(item) {
   Object.assign(programForm, item)
+  programDialogOpen.value = true
 }
 
 async function deleteProgram(id) {
@@ -451,6 +540,7 @@ async function deleteProgram(id) {
 
 async function saveTeam() {
   error.value = ''
+  saving.value = true
   try {
     const body = new FormData()
     body.append('name', teamForm.name)
@@ -464,15 +554,18 @@ async function saveTeam() {
 
     await cmsApi.saveTeam(teamForm.id, body)
     resetTeamForm()
+    teamDialogOpen.value = false
     await load()
     await notifyLanding()
     status.value = 'Team member saved'
   } catch (e) {
     error.value = e.message
+  } finally {
+    saving.value = false
   }
 }
 
-async function editTeam(item) {
+function editTeam(item) {
   Object.assign(teamForm, {
     id: item.id,
     name: item.name || '',
@@ -486,6 +579,7 @@ async function editTeam(item) {
     is_published: item.is_published !== false,
     accepts_meetings: item.accepts_meetings !== false,
   })
+  teamDialogOpen.value = true
 }
 
 async function deleteTeam(id) {
@@ -495,15 +589,24 @@ async function deleteTeam(id) {
 }
 
 async function saveValue() {
-  await cmsApi.saveValue(valueForm.id, { ...valueForm })
-  Object.assign(valueForm, { id: null, title: '', description: '', emoji: '💡', order: 0 })
-  await load()
-  await notifyLanding()
-  status.value = 'Value saved'
+  saving.value = true
+  try {
+    await cmsApi.saveValue(valueForm.id, { ...valueForm })
+    resetValueForm()
+    valueDialogOpen.value = false
+    await load()
+    await notifyLanding()
+    status.value = 'Value saved'
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    saving.value = false
+  }
 }
 
-async function editValue(item) {
+function editValue(item) {
   Object.assign(valueForm, item)
+  valueDialogOpen.value = true
 }
 
 async function deleteValue(id) {
@@ -621,137 +724,397 @@ onMounted(load)
       <button class="cta" :disabled="saving" @click="saveGallerySection">Save section copy</button>
 
       <h2 class="section-title">Gallery images</h2>
-      <div class="editor">
-        <input v-model="imageForm.label" placeholder="Label (e.g. Digital Skills Training)" />
-        <input v-model="imageForm.alt" placeholder="Alt text" />
-        <div class="row2">
-          <label class="color-field">
-            Accent
-            <div class="color-control">
-              <input v-model="imageForm.accent_color" type="color" class="color-swatch" />
-              <input v-model="imageForm.accent_color" type="text" class="color-hex" maxlength="7" />
-            </div>
-          </label>
-          <label>Order<input v-model.number="imageForm.order" type="number" min="0" /></label>
-        </div>
-        <label class="photo-field">
-          Image
-          <input type="file" accept="image/*" @change="onGalleryImageChange" />
-        </label>
-        <div v-if="imageForm.imagePreview" class="media-preview wide">
-          <img :src="imageForm.imagePreview" alt="Gallery preview" />
-        </div>
-        <div class="row-actions">
-          <button class="cta" :disabled="saving" @click="saveGalleryImage">
-            {{ imageForm.id ? 'Update' : 'Add' }} image
-          </button>
-          <button v-if="imageForm.id" type="button" @click="resetImageForm">Cancel</button>
-        </div>
+      <div class="list-toolbar">
+        <p class="hint">Photos shown in the landing gallery strip.</p>
+        <button type="button" class="cta" @click="openCreateImage">Add image</button>
       </div>
 
-      <div class="gallery-grid">
-        <div v-for="item in sortedGalleryImages" :key="item.id" class="gallery-card">
-          <img v-if="item.image" :src="item.image" :alt="item.alt || item.label" />
-          <div class="gallery-card-body">
-            <strong>{{ item.label || 'Untitled' }}</strong>
-            <p>Order {{ item.order }} · {{ item.is_active === false ? 'Hidden' : 'Active' }}</p>
-            <div class="actions">
-              <button type="button" @click="editGalleryImage(item)">Edit</button>
-              <button type="button" class="danger" @click="deleteGalleryImage(item.id)">Delete</button>
-            </div>
-          </div>
-        </div>
-        <p v-if="!sortedGalleryImages.length" class="empty-media">
-          No gallery images yet — upload the first one above.
-        </p>
-      </div>
+      <DataTable
+        :columns="galleryColumns"
+        :rows="sortedGalleryImages"
+        empty-text="No gallery images yet — click Add image to upload."
+      >
+        <template #cell-image="{ row }">
+          <img
+            v-if="row.image"
+            :src="row.image"
+            :alt="row.alt || row.label"
+            class="table-thumb"
+          />
+          <span v-else class="table-thumb placeholder">—</span>
+        </template>
+        <template #cell-label="{ row }">
+          <strong class="table-title">{{ row.label || 'Untitled' }}</strong>
+          <p v-if="row.alt" class="table-sub">{{ row.alt }}</p>
+        </template>
+        <template #cell-status="{ row }">
+          <span class="status-pill" :class="isActiveStatus(row) ? 'on' : 'off'">
+            {{ isActiveStatus(row) ? 'Active' : 'Hidden' }}
+          </span>
+        </template>
+        <template #actions="{ row }">
+          <button type="button" class="table-btn" @click="editGalleryImage(row)">Edit</button>
+          <button type="button" class="table-btn danger" @click="deleteGalleryImage(row.id)">
+            Delete
+          </button>
+        </template>
+      </DataTable>
     </section>
 
     <section v-else-if="tab === 'programs'" class="panel">
-      <div class="editor">
-        <input v-model="programForm.emoji" placeholder="Emoji" />
-        <input v-model="programForm.title" placeholder="Title" />
-        <input v-model="programForm.tag" placeholder="Tag" />
-        <textarea v-model="programForm.description" placeholder="Description" rows="2" />
-        <button class="cta" @click="saveProgram">{{ programForm.id ? 'Update' : 'Add' }} program</button>
+      <div class="list-toolbar">
+        <h2 class="section-title">Programs</h2>
+        <button type="button" class="cta" @click="openCreateProgram">Add program</button>
       </div>
-      <div v-for="item in programs" :key="item.id" class="list-item">
-        <div>
-          <strong>{{ item.emoji }} {{ item.title }}</strong>
-          <p>{{ item.description }}</p>
-        </div>
-        <div class="actions">
-          <button @click="editProgram(item)">Edit</button>
-          <button class="danger" @click="deleteProgram(item.id)">Delete</button>
-        </div>
-      </div>
+
+      <DataTable
+        :columns="programColumns"
+        :rows="programs"
+        empty-text="No programs yet — click Add program to create one."
+      >
+        <template #cell-emoji="{ value }">
+          <span class="table-emoji">{{ value }}</span>
+        </template>
+        <template #cell-title="{ row }">
+          <strong class="table-title">{{ row.title }}</strong>
+          <p class="table-sub">{{ row.description }}</p>
+        </template>
+        <template #cell-tag="{ row }">
+          <span
+            v-if="row.tag"
+            class="tag-pill"
+            :style="{ backgroundColor: `${row.tag_color || '#ff6a00'}22`, color: row.tag_color || '#ff6a00' }"
+          >
+            {{ row.tag }}
+          </span>
+          <span v-else class="muted-dash">—</span>
+        </template>
+        <template #cell-status="{ row }">
+          <span class="status-pill" :class="isActiveStatus(row) ? 'on' : 'off'">
+            {{ isActiveStatus(row) ? 'Active' : 'Hidden' }}
+          </span>
+        </template>
+        <template #actions="{ row }">
+          <button type="button" class="table-btn" @click="editProgram(row)">Edit</button>
+          <button type="button" class="table-btn danger" @click="deleteProgram(row.id)">Delete</button>
+        </template>
+      </DataTable>
     </section>
 
     <section v-else-if="tab === 'team'" class="panel">
-      <div class="editor">
-        <input v-model="teamForm.name" placeholder="Name" />
-        <input v-model="teamForm.role" placeholder="Role" />
-        <input v-model="teamForm.initials" placeholder="Initials" />
-        <textarea v-model="teamForm.bio" placeholder="Bio" rows="2" />
-        <label class="photo-field">
-          Photo
-          <input ref="photoInput" type="file" accept="image/*" @change="onTeamPhotoChange" />
-        </label>
-        <div v-if="teamForm.photoPreview" class="photo-preview-wrap">
-          <div class="photo-preview">
-            <img :src="teamForm.photoPreview" alt="Team member photo preview" />
-          </div>
-        </div>
-        <label class="check">
-          <input v-model="teamForm.is_published" type="checkbox" />
-          Published on website
-        </label>
-        <label class="check">
-          <input v-model="teamForm.accepts_meetings" type="checkbox" />
-          Accepts meeting requests
-        </label>
-        <div class="row-actions">
-          <button class="cta" @click="saveTeam">{{ teamForm.id ? 'Update' : 'Add' }} member</button>
-          <button v-if="teamForm.id" type="button" @click="resetTeamForm">Cancel</button>
-        </div>
+      <div class="list-toolbar">
+        <h2 class="section-title">Team members</h2>
+        <button type="button" class="cta" @click="openCreateTeam">Add member</button>
       </div>
-      <div v-for="item in team" :key="item.id" class="list-item">
-        <div class="member-row">
-          <img v-if="item.photo" :src="item.photo" :alt="item.name" class="member-thumb" />
-          <div v-else class="member-thumb placeholder">{{ item.initials || '?' }}</div>
-          <div>
-            <strong>{{ item.name }}</strong>
-            <p>
-              {{ item.role }}
-              <span v-if="item.accepts_meetings !== false"> · Meetings on</span>
-            </p>
-          </div>
-        </div>
-        <div class="actions">
-          <button @click="editTeam(item)">Edit</button>
-          <button class="danger" @click="deleteTeam(item.id)">Delete</button>
-        </div>
-      </div>
+
+      <DataTable
+        :columns="teamColumns"
+        :rows="team"
+        empty-text="No team members yet — click Add member to create one."
+      >
+        <template #cell-photo="{ row }">
+          <img v-if="row.photo" :src="row.photo" :alt="row.name" class="table-thumb portrait" />
+          <span v-else class="table-thumb portrait placeholder">{{ row.initials || '?' }}</span>
+        </template>
+        <template #cell-name="{ row }">
+          <strong class="table-title">{{ row.name }}</strong>
+          <p v-if="row.initials" class="table-sub">{{ row.initials }}</p>
+        </template>
+        <template #cell-meetings="{ row }">
+          <span class="status-pill" :class="row.accepts_meetings !== false ? 'on' : 'off'">
+            {{ row.accepts_meetings !== false ? 'On' : 'Off' }}
+          </span>
+        </template>
+        <template #cell-status="{ row }">
+          <span class="status-pill" :class="isActiveStatus(row) ? 'on' : 'off'">
+            {{ isActiveStatus(row) ? 'Published' : 'Draft' }}
+          </span>
+        </template>
+        <template #actions="{ row }">
+          <button type="button" class="table-btn" @click="editTeam(row)">Edit</button>
+          <button type="button" class="table-btn danger" @click="deleteTeam(row.id)">Delete</button>
+        </template>
+      </DataTable>
     </section>
 
     <section v-else-if="tab === 'values'" class="panel">
-      <div class="editor">
-        <input v-model="valueForm.emoji" placeholder="Emoji" />
-        <input v-model="valueForm.title" placeholder="Title" />
-        <textarea v-model="valueForm.description" placeholder="Description" rows="2" />
-        <button class="cta" @click="saveValue">{{ valueForm.id ? 'Update' : 'Add' }} value</button>
+      <div class="list-toolbar">
+        <h2 class="section-title">Brand values</h2>
+        <button type="button" class="cta" @click="openCreateValue">Add value</button>
       </div>
-      <div v-for="item in values" :key="item.id" class="list-item">
-        <div>
-          <strong>{{ item.emoji }} {{ item.title }}</strong>
-          <p>{{ item.description }}</p>
-        </div>
-        <div class="actions">
-          <button @click="editValue(item)">Edit</button>
-          <button class="danger" @click="deleteValue(item.id)">Delete</button>
-        </div>
-      </div>
+
+      <DataTable
+        :columns="valueColumns"
+        :rows="values"
+        empty-text="No brand values yet — click Add value to create one."
+      >
+        <template #cell-emoji="{ value }">
+          <span class="table-emoji">{{ value }}</span>
+        </template>
+        <template #cell-title="{ row }">
+          <strong class="table-title">{{ row.title }}</strong>
+          <p class="table-sub">{{ row.description }}</p>
+        </template>
+        <template #cell-status="{ row }">
+          <span class="status-pill" :class="isActiveStatus(row) ? 'on' : 'off'">
+            {{ isActiveStatus(row) ? 'Active' : 'Hidden' }}
+          </span>
+        </template>
+        <template #actions="{ row }">
+          <button type="button" class="table-btn" @click="editValue(row)">Edit</button>
+          <button type="button" class="table-btn danger" @click="deleteValue(row.id)">Delete</button>
+        </template>
+      </DataTable>
     </section>
+
+    <FormDialog
+      v-model:open="imageDialogOpen"
+      :title="imageForm.id ? 'Edit gallery image' : 'Add gallery image'"
+      description="Upload and label an image for the landing gallery."
+      :submit-label="imageForm.id ? 'Update image' : 'Add image'"
+      :loading="saving"
+      size="lg"
+      @submit="saveGalleryImage"
+      @cancel="resetImageForm"
+    >
+      <div class="dialog-form">
+        <section>
+          <h3>Image details</h3>
+          <div class="field">
+            <Label for="gallery-label">Label</Label>
+            <Input
+              id="gallery-label"
+              v-model="imageForm.label"
+              placeholder="Digital Skills Training"
+            />
+          </div>
+          <div class="field">
+            <Label for="gallery-alt">Alt text</Label>
+            <Input
+              id="gallery-alt"
+              v-model="imageForm.alt"
+              placeholder="Describe the image for accessibility"
+            />
+          </div>
+          <div class="row2">
+            <label class="color-field field">
+              Accent color
+              <div class="color-control">
+                <input v-model="imageForm.accent_color" type="color" class="color-swatch" />
+                <input v-model="imageForm.accent_color" type="text" class="color-hex" maxlength="7" />
+              </div>
+            </label>
+            <div class="field">
+              <Label for="gallery-order">Order</Label>
+              <Input id="gallery-order" v-model.number="imageForm.order" type="number" min="0" />
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        <section>
+          <h3>Upload</h3>
+          <label class="photo-field field">
+            Image file
+            <input type="file" accept="image/*" @change="onGalleryImageChange" />
+          </label>
+          <div v-if="imageForm.imagePreview" class="media-preview wide">
+            <img :src="imageForm.imagePreview" alt="Gallery preview" />
+          </div>
+        </section>
+      </div>
+    </FormDialog>
+
+    <FormDialog
+      v-model:open="programDialogOpen"
+      :title="programForm.id ? 'Edit program' : 'Add program'"
+      description="Programs shown on the landing page services section."
+      :submit-label="programForm.id ? 'Update program' : 'Add program'"
+      :loading="saving"
+      size="lg"
+      @submit="saveProgram"
+      @cancel="resetProgramForm"
+    >
+      <div class="dialog-form">
+        <section>
+          <h3>Program</h3>
+          <div class="row2">
+            <div class="field">
+              <Label for="program-emoji">Emoji</Label>
+              <Input id="program-emoji" v-model="programForm.emoji" placeholder="💻" />
+            </div>
+            <div class="field">
+              <Label for="program-order">Order</Label>
+              <Input id="program-order" v-model.number="programForm.order" type="number" min="0" />
+            </div>
+          </div>
+          <div class="field">
+            <Label for="program-title">Title</Label>
+            <Input id="program-title" v-model="programForm.title" placeholder="Digital Skills Training" />
+          </div>
+          <div class="field">
+            <Label for="program-description">Description</Label>
+            <Textarea
+              id="program-description"
+              v-model="programForm.description"
+              rows="4"
+              placeholder="Short summary shown on the homepage"
+            />
+          </div>
+        </section>
+
+        <Separator />
+
+        <section>
+          <h3>Tag</h3>
+          <div class="row2">
+            <div class="field">
+              <Label for="program-tag">Tag label</Label>
+              <Input id="program-tag" v-model="programForm.tag" placeholder="Popular" />
+            </div>
+            <label class="color-field field">
+              Tag color
+              <div class="color-control">
+                <input v-model="programForm.tag_color" type="color" class="color-swatch" />
+                <input v-model="programForm.tag_color" type="text" class="color-hex" maxlength="7" />
+              </div>
+            </label>
+          </div>
+          <label class="check">
+            <input v-model="programForm.is_active" type="checkbox" />
+            Show on homepage
+          </label>
+        </section>
+      </div>
+    </FormDialog>
+
+    <FormDialog
+      v-model:open="teamDialogOpen"
+      :title="teamForm.id ? 'Edit team member' : 'Add team member'"
+      description="People featured in Meet Our Team and available for meetings."
+      :submit-label="teamForm.id ? 'Update member' : 'Add member'"
+      :loading="saving"
+      size="lg"
+      @submit="saveTeam"
+      @cancel="resetTeamForm"
+    >
+      <div class="dialog-form">
+        <section>
+          <h3>Profile</h3>
+          <div class="row2">
+            <div class="field">
+              <Label for="team-name">Name</Label>
+              <Input id="team-name" v-model="teamForm.name" placeholder="Full name" />
+            </div>
+            <div class="field">
+              <Label for="team-role">Role</Label>
+              <Input id="team-role" v-model="teamForm.role" placeholder="Job title" />
+            </div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <Label for="team-initials">Initials</Label>
+              <Input id="team-initials" v-model="teamForm.initials" placeholder="MM" maxlength="4" />
+            </div>
+            <div class="field">
+              <Label for="team-order">Order</Label>
+              <Input id="team-order" v-model.number="teamForm.order" type="number" min="0" />
+            </div>
+          </div>
+          <div class="field">
+            <Label for="team-bio">Bio</Label>
+            <Textarea id="team-bio" v-model="teamForm.bio" rows="4" placeholder="Short bio for the team section" />
+          </div>
+        </section>
+
+        <Separator />
+
+        <section>
+          <h3>Photo</h3>
+          <label class="photo-field field">
+            Portrait
+            <input ref="photoInput" type="file" accept="image/*" @change="onTeamPhotoChange" />
+          </label>
+          <div v-if="teamForm.photoPreview" class="photo-preview-wrap">
+            <div class="photo-preview">
+              <img :src="teamForm.photoPreview" alt="Team member photo preview" />
+            </div>
+          </div>
+        </section>
+
+        <Separator />
+
+        <section>
+          <h3>Visibility</h3>
+          <label class="check">
+            <input v-model="teamForm.is_published" type="checkbox" />
+            Published on website
+          </label>
+          <label class="check">
+            <input v-model="teamForm.accepts_meetings" type="checkbox" />
+            Accepts meeting requests
+          </label>
+        </section>
+      </div>
+    </FormDialog>
+
+    <FormDialog
+      v-model:open="valueDialogOpen"
+      :title="valueForm.id ? 'Edit value' : 'Add value'"
+      description="Brand values shown on the landing page."
+      :submit-label="valueForm.id ? 'Update value' : 'Add value'"
+      :loading="saving"
+      size="lg"
+      @submit="saveValue"
+      @cancel="resetValueForm"
+    >
+      <div class="dialog-form">
+        <section>
+          <h3>Value</h3>
+          <div class="row2">
+            <div class="field">
+              <Label for="value-emoji">Emoji</Label>
+              <Input id="value-emoji" v-model="valueForm.emoji" placeholder="💡" />
+            </div>
+            <div class="field">
+              <Label for="value-order">Order</Label>
+              <Input id="value-order" v-model.number="valueForm.order" type="number" min="0" />
+            </div>
+          </div>
+          <div class="field">
+            <Label for="value-title">Title</Label>
+            <Input id="value-title" v-model="valueForm.title" placeholder="Innovation" />
+          </div>
+          <div class="field">
+            <Label for="value-description">Description</Label>
+            <Textarea
+              id="value-description"
+              v-model="valueForm.description"
+              rows="4"
+              placeholder="What this value means to SLA"
+            />
+          </div>
+        </section>
+
+        <Separator />
+
+        <section>
+          <h3>Style</h3>
+          <label class="color-field field">
+            Accent color
+            <div class="color-control">
+              <input v-model="valueForm.color" type="color" class="color-swatch" />
+              <input v-model="valueForm.color" type="text" class="color-hex" maxlength="7" />
+            </div>
+          </label>
+          <label class="check">
+            <input v-model="valueForm.is_active" type="checkbox" />
+            Show on homepage
+          </label>
+        </section>
+      </div>
+    </FormDialog>
 
     <ImageCropModal
       :open="cropOpen"
@@ -785,10 +1148,55 @@ h1 { margin-bottom: 0.2rem; }
 }
 .tabs button.active { background: #0a1f44; color: #fff; }
 .panel, .editor { background: #fff; border-radius: 16px; padding: 1rem; display: grid; gap: 0.7rem; }
-label { display: grid; gap: 0.3rem; color: #5b6b82; font-size: 0.9rem; }
+.list-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+.dialog-form {
+  display: grid;
+  gap: 2rem;
+}
+.dialog-form section {
+  display: grid;
+  gap: 1.25rem;
+}
+.dialog-form h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0a1f44;
+}
+.field {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.dialog-form input,
+.dialog-form textarea,
+.dialog-form select {
+  width: 100%;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  color: #0a1f44;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.check input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #ff6a00;
+}
+label { display: grid; gap: 0.5rem; color: #5b6b82; font-size: 0.9rem; }
 .nested { display: contents; }
 input, textarea {
-  border: 1px solid #d8dee8; border-radius: 10px; padding: 0.7rem 0.8rem; font: inherit; color: #0a1f44;
+  border: 1px solid #d8dee8; border-radius: 0.625rem; padding: 0.75rem 1rem; font: inherit; color: #0a1f44;
 }
 .photo-field input[type="file"] {
   padding: 0.45rem;
@@ -868,57 +1276,92 @@ input, textarea {
   padding: 1rem;
   font-size: 0.88rem;
 }
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.85rem;
-  margin-top: 0.5rem;
-}
-.gallery-card {
-  border: 1px solid #eef1f5;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #fff;
-}
-.gallery-card img {
-  width: 100%;
-  height: 120px;
+.table-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
   object-fit: cover;
   display: block;
   background: #eef2f7;
+  border: 1px solid #e8eef6;
 }
-.gallery-card-body {
-  padding: 0.75rem;
-  display: grid;
-  gap: 0.35rem;
-}
-.gallery-card-body p {
-  margin: 0;
-  color: #5b6b82;
-  font-size: 0.8rem;
-}
-.member-row {
-  display: flex;
-  gap: 0.85rem;
-  align-items: center;
-}
-.member-thumb {
-  width: 48px;
-  height: 60px;
-  border-radius: 10px;
+.table-thumb.portrait {
+  height: 64px;
   object-fit: contain;
   object-position: center;
   background: #fff;
-  flex-shrink: 0;
-  border: 1px solid #e8eef6;
 }
-.member-thumb.placeholder {
+.table-thumb.placeholder {
   display: grid;
   place-items: center;
+  color: #9aa8bc;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.table-thumb.portrait.placeholder {
   background: #0a1f44;
   color: #fff;
+}
+.table-title {
+  display: block;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.table-sub {
+  margin: 0.2rem 0 0;
+  color: #5b6b82;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.table-emoji {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.muted-dash {
+  color: #9aa8bc;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-pill.on {
+  background: #e8f8ee;
+  color: #0a7a3d;
+}
+.status-pill.off {
+  background: #f1f5f9;
+  color: #5b6b82;
+}
+.table-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.38rem 0.62rem;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: #eef2f7;
+  color: #0a1f44;
+}
+.table-btn.danger {
+  background: #ffe8e4;
+  color: #b42318;
 }
 .row-actions {
   display: flex;
@@ -957,11 +1400,6 @@ input, textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   text-transform: lowercase;
 }
-.list-item {
-  display: flex; justify-content: space-between; gap: 1rem; align-items: start;
-  padding: 0.8rem 0; border-top: 1px solid #eef1f5;
-}
-.list-item p { color: #5b6b82; margin-top: 0.25rem; }
 .actions { display: flex; gap: 0.4rem; }
 .actions button, .cta, .danger, .row-actions button {
   border: 0; border-radius: 999px; padding: 0.55rem 0.9rem; font: inherit; cursor: pointer;

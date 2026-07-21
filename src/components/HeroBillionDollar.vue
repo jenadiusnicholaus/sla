@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { mediaUrl } from '@/lib/mediaUrl'
 
 interface Stat {
   value: string
@@ -60,12 +61,11 @@ const DEFAULT_BARS: ProgressBar[] = [
   { label: 'States Reached', display_value: '36 / 36', percent: 100, color_variant: 'green' },
 ]
 
-const heroPoster = computed(
-  () => props.hero?.video_poster || '/images/STREET_DIGITAL_LABS_AFRICA.png',
+const heroPoster = computed(() =>
+  mediaUrl(props.hero?.video_poster) || '/images/STREET_DIGITAL_LABS_AFRICA.png',
 )
-const heroVideo = computed(
-  () => props.hero?.background_video || '/video/IMG_9125.MP4',
-)
+const heroVideo = computed(() => mediaUrl(props.hero?.background_video))
+const hasHeroVideo = computed(() => Boolean(heroVideo.value))
 const displayStats = computed(() => (props.stats?.length ? props.stats : DEFAULT_STATS))
 const tags = computed(() => {
   const cms = props.hero?.tags
@@ -107,12 +107,17 @@ const onPrimaryCta = () => {
 <template>
   <section id="home" class="hero">
     <video
+      v-if="hasHeroVideo"
+      :key="heroVideo"
       class="hero-video"
-      autoplay muted loop playsinline
+      autoplay
+      muted
+      loop
+      playsinline
       :poster="heroPoster"
-    >
-      <source :src="heroVideo" type="video/mp4" />
-    </video>
+      :src="heroVideo"
+    />
+    <div v-else class="hero-video hero-video-fallback" :style="{ backgroundImage: `url(${heroPoster})` }" />
     <div class="hero-overlay" aria-hidden="true"></div>
 
     <div class="hero-content">
@@ -207,6 +212,11 @@ const onPrimaryCta = () => {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover; z-index: 0;
+}
+.hero-video-fallback {
+  background-size: cover;
+  background-position: center;
+  background-color: #061427;
 }
 .hero-overlay {
   position: absolute; inset: 0; z-index: 1;

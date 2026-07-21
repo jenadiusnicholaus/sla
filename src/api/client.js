@@ -146,6 +146,8 @@ export const profileApi = {
     username
       ? api(`/profiles/${username}/`, { method: "PATCH", body })
       : api("/profiles/", { method: "POST", body }),
+  ensureQr: (username) =>
+    api(`/profiles/${username}/ensure-qr/`, { method: "POST", body: {} }),
   vcardUrl: (username) => `${API_BASE}/profiles/${username}/vcard/`,
 };
 

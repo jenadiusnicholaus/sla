@@ -1,5 +1,6 @@
 import { createVuestic } from 'vuestic-ui'
 import 'vuestic-ui/css'
+import './assets/ui.css'
 import './assets/main.css'
 
 import { createApp } from 'vue'

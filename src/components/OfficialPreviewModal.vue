@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { cmsApi } from '@/api/client'
+import { mediaUrl } from '@/lib/mediaUrl'
 
 export interface Official {
   id?: number
@@ -128,7 +129,7 @@ async function submit() {
             <div class="hero" :style="{ background: accent }">
               <img
                 v-if="official.photo"
-                :src="official.photo"
+                :src="mediaUrl(official.photo)"
                 :alt="official.name"
                 class="photo"
               />

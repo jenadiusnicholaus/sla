@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useFadeUp } from "@/composables/useFadeUp";
 import LandingHeader from "@/components/landing/LandingHeader.vue";
+import { mediaUrl } from "@/lib/mediaUrl";
 
 interface GalleryImage {
   src: string;
@@ -47,7 +48,7 @@ const imagePool = computed<GalleryImage[]>(() => {
     .filter((img) => img.is_active !== false && img.image)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map((img) => ({
-      src: img.image as string,
+      src: mediaUrl(img.image as string),
       alt: img.alt || img.label || "Gallery image",
       label: img.label || "",
       color: img.accent_color || "#ff6a00",

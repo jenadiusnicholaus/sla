@@ -4,6 +4,7 @@ import { cmsApi } from '@/api/client'
 import { invalidateHomepageCms } from '@/composables/useHomepageCms'
 import ImageCropModal from '@/components/ImageCropModal.vue'
 import { FormDialog, DataTable, Input, Label, Separator, Textarea } from '@/components/ui'
+import { mediaUrl } from '@/lib/mediaUrl'
 
 const tabs = [
   'settings',
@@ -512,7 +513,7 @@ function editGalleryImage(item) {
     order: item.order ?? 0,
     is_active: item.is_active !== false,
     image: item.image || null,
-    imagePreview: item.image || '',
+    imagePreview: mediaUrl(item.image) || '',
     imageFile: null,
   })
   imageDialogOpen.value = true
@@ -590,7 +591,7 @@ function editTeam(item) {
     email: item.email || '',
     bio: item.bio || '',
     photo: item.photo || null,
-    photoPreview: item.photo || '',
+    photoPreview: mediaUrl(item.photo) || '',
     photoFile: null,
     order: item.order ?? 0,
     is_published: item.is_published !== false,
@@ -757,7 +758,7 @@ onMounted(load)
         <template #cell-image="{ row }">
           <img
             v-if="row.image"
-            :src="row.image"
+            :src="mediaUrl(row.image)"
             :alt="row.alt || row.label"
             class="table-thumb"
           />
@@ -833,7 +834,7 @@ onMounted(load)
         empty-text="No team members yet — click Add member to create one."
       >
         <template #cell-photo="{ row }">
-          <img v-if="row.photo" :src="row.photo" :alt="row.name" class="table-thumb portrait" />
+          <img v-if="row.photo" :src="mediaUrl(row.photo)" :alt="row.name" class="table-thumb portrait" />
           <span v-else class="table-thumb portrait placeholder">{{ row.initials || '?' }}</span>
         </template>
         <template #cell-name="{ row }">

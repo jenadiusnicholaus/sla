@@ -4,6 +4,7 @@ import { useFadeUp } from '@/composables/useFadeUp'
 import OfficialPreviewModal, { type Official } from '@/components/OfficialPreviewModal.vue'
 import LandingHeader from '@/components/landing/LandingHeader.vue'
 import SectionKicker from '@/components/landing/SectionKicker.vue'
+import { mediaUrl } from '@/lib/mediaUrl'
 
 interface OrgNode {
   title: string
@@ -357,7 +358,7 @@ onUnmounted(() => clearAuto())
               >
                 <img
                   v-if="activeMember.photo"
-                  :src="activeMember.photo"
+                  :src="mediaUrl(activeMember.photo)"
                   :alt="activeMember.name"
                 />
                 <span v-else class="portrait-fallback">
@@ -378,7 +379,7 @@ onUnmounted(() => clearAuto())
             @click="selectMember(index)"
           >
             <div class="thumb-avatar" :style="{ background: member.color || '#0a1f44' }">
-              <img v-if="member.photo" :src="member.photo" :alt="member.name" />
+              <img v-if="member.photo" :src="mediaUrl(member.photo)" :alt="member.name" />
               <span v-else>{{ member.initials || member.name.slice(0, 1) }}</span>
             </div>
             <div class="thumb-meta">

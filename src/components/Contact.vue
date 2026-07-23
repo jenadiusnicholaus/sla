@@ -60,7 +60,15 @@ const slaHours = computed(() => props.settings?.response_sla_hours || 24);
 const form = ref<FormState>({ name: "", email: "", subject: "", message: "" });
 const isSending = ref(false);
 const isSent = ref(false);
+const sentTo = ref("");
 const sendError = ref("");
+
+const resetForm = (): void => {
+  isSent.value = false;
+  sentTo.value = "";
+  sendError.value = "";
+  form.value = { name: "", email: "", subject: "", message: "" };
+};
 
 const sendMessage = async (): Promise<void> => {
   sendError.value = "";
@@ -70,7 +78,9 @@ const sendMessage = async (): Promise<void> => {
   }
   isSending.value = true;
   try {
+    const email = form.value.email.trim();
     await cmsApi.postContact({ ...form.value });
+    sentTo.value = email;
     isSent.value = true;
     form.value = { name: "", email: "", subject: "", message: "" };
   } catch (e: unknown) {
@@ -194,14 +204,36 @@ const sendMessage = async (): Promise<void> => {
             </button>
           </template>
 
-          <div v-else class="sent-success">
-            <div class="sent-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+          <div v-else class="sent-success" role="status" aria-live="polite">
+            <div class="sent-mark" aria-hidden="true">
+              <span class="sent-ring"></span>
+              <span class="sent-ring delay"></span>
+              <span class="sent-check">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
             </div>
-            <h3>Message Sent!</h3>
-            <p>
-              Thank you for reaching out. We'll get back to you within 24 hours.
+            <p class="sent-kicker">Delivered</p>
+            <h3>Message received</h3>
+            <p class="sent-copy">
+              Thanks for writing in. Our team will reply within
+              <strong>{{ slaHours }} hours</strong>.
             </p>
+            <p v-if="sentTo" class="sent-inbox">
+              Confirmation sent to <strong>{{ sentTo }}</strong>
+            </p>
+            <div class="sent-actions">
+              <button type="button" class="btn-again" @click="resetForm">
+                Send another message
+              </button>
+              <a class="sent-home" href="#home">Back to top</a>
+            </div>
+            <div class="sent-stripe" aria-hidden="true">
+              <span class="stripe green"></span>
+              <span class="stripe white"></span>
+              <span class="stripe orange"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -447,23 +479,172 @@ const sendMessage = async (): Promise<void> => {
 
 /* Success */
 .sent-success {
+  position: relative;
   text-align: center;
-  padding: 3rem 1rem;
+  padding: 2.75rem 1.5rem 2.25rem;
+  border: 1px solid rgba(10, 31, 68, 0.08);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(10, 122, 61, 0.08), transparent 55%),
+    linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+  overflow: hidden;
+  animation: sent-in 0.45s ease-out;
 }
-.sent-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+@keyframes sent-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.sent-mark {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 1.25rem;
+}
+.sent-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(10, 122, 61, 0.28);
+  animation: sent-pulse 1.8s ease-out infinite;
+}
+.sent-ring.delay {
+  animation-delay: 0.55s;
+}
+@keyframes sent-pulse {
+  0% {
+    transform: scale(0.72);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+.sent-check {
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #0a7a3d, #086332);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 24px rgba(10, 122, 61, 0.28);
+  animation: check-pop 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) 0.08s both;
+}
+@keyframes check-pop {
+  from {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.sent-check svg {
+  width: 28px;
+  height: 28px;
+}
+.sent-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #0a7a3d;
+  font-family: "Poppins", sans-serif;
 }
 .sent-success h3 {
-  font-size: 1.5rem;
+  margin: 0 0 0.65rem;
+  font-size: 1.65rem;
   font-weight: 800;
   color: #0a1f44;
   font-family: "Poppins", sans-serif;
-  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
 }
-.sent-success p {
+.sent-copy {
+  margin: 0 auto;
+  max-width: 28rem;
   color: #5a6a85;
   line-height: 1.7;
+  font-size: 0.98rem;
+}
+.sent-copy strong {
+  color: #0a1f44;
+  font-weight: 700;
+}
+.sent-inbox {
+  margin: 1rem auto 0;
+  display: inline-block;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(10, 31, 68, 0.05);
+  color: #5a6a85;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+.sent-inbox strong {
+  color: #0a1f44;
+  font-weight: 650;
+  word-break: break-all;
+}
+.sent-actions {
+  margin-top: 1.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  justify-content: center;
+  align-items: center;
+}
+.btn-again {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1.4rem;
+  background: linear-gradient(135deg, #ff6a00, #e04500);
+  color: #fff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: "Poppins", sans-serif;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255, 106, 0, 0.28);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-again:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(255, 106, 0, 0.38);
+}
+.sent-home {
+  color: #0a1f44;
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-decoration: none;
+  border-bottom: 1.5px solid rgba(10, 31, 68, 0.2);
+  padding-bottom: 0.1rem;
+}
+.sent-home:hover {
+  color: #ff6a00;
+  border-color: #ff6a00;
+}
+.sent-stripe {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  height: 4px;
+}
+.sent-stripe .stripe {
+  flex: 1;
+}
+.sent-stripe .white {
+  background: #e8edf4;
 }
 
 /* Responsive */

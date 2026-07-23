@@ -7,7 +7,9 @@ const folder = ref('inbox')
 const query = ref('')
 const error = ref('')
 const statusMsg = ref('')
-const loading = ref(true)
+const statusEmail = ref('')
+const statusVisible = ref(false)
+let statusTimer = nullconst loading = ref(true)
 const sending = ref(false)
 const selected = ref(null)
 const replyOpen = ref(false)
@@ -127,6 +129,12 @@ async function openDetail(item) {
   replySubject.value = item.subject ? `Re: ${item.subject}` : 'Re: your message to Street Labs'
   mobileShowReading.value = true
   statusMsg.value = ''
+  statusEmail.value = ''
+  statusVisible.value = false
+  if (statusTimer) {
+    clearTimeout(statusTimer)
+    statusTimer = null
+  }
 
   if (item.status === 'new') {
     try {
@@ -170,7 +178,13 @@ async function sendReply() {
     selected.value = updated
     replyOpen.value = false
     replyBody.value = ''
-    statusMsg.value = `Message sent to ${updated.email}`
+    statusMsg.value = 'Reply delivered'
+    statusEmail.value = updated.email
+    statusVisible.value = true
+    if (statusTimer) clearTimeout(statusTimer)
+    statusTimer = setTimeout(() => {
+      statusVisible.value = false
+    }, 5200)
   } catch (e) {
     error.value = e.message
   } finally {
@@ -231,7 +245,21 @@ onMounted(load)
       </div>
 
       <p v-if="error" class="banner error">{{ error }}</p>
-      <p v-if="statusMsg" class="banner ok">{{ statusMsg }}</p>
+
+      <Transition name="toast">
+        <div v-if="statusVisible" class="send-toast" role="status" aria-live="polite">
+          <span class="toast-check" aria-hidden="true">
+            <VaIcon name="check_circle" size="22px" />
+          </span>
+          <div class="toast-copy">
+            <strong>{{ statusMsg }}</strong>
+            <span v-if="statusEmail">Sent to {{ statusEmail }}</span>
+          </div>
+          <button type="button" class="toast-close" aria-label="Dismiss" @click="statusVisible = false">
+            <VaIcon name="close" size="16px" />
+          </button>
+        </div>
+      </Transition>
 
       <div v-if="loading" class="empty-state">
         <VaProgressCircle indeterminate size="small" />
@@ -509,9 +537,63 @@ onMounted(load)
   background: #fef3f2;
   color: #b42318;
 }
-.banner.ok {
-  background: #ecfdf3;
+
+.send-toast {
+  margin: 0.65rem 0.75rem 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ecfdf3 0%, #f0fdf4 100%);
+  border: 1px solid rgba(10, 122, 61, 0.22);
+  box-shadow: 0 8px 20px rgba(10, 122, 61, 0.1);
+}
+.toast-check {
   color: var(--mail-green);
+  display: grid;
+  place-items: center;
+}
+.toast-copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.toast-copy strong {
+  color: var(--mail-navy);
+  font-size: 0.9rem;
+}
+.toast-copy span {
+  color: var(--mail-muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.toast-close {
+  border: 0;
+  background: transparent;
+  color: var(--mail-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.toast-close:hover {
+  background: rgba(10, 31, 68, 0.06);
+  color: var(--mail-navy);
+}
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 .empty-state {

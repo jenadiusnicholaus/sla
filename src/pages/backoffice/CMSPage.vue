@@ -300,9 +300,22 @@ function onCropConfirm({ file, previewUrl }) {
   cropSrc.value = ''
 }
 
+const HERO_VIDEO_MAX_BYTES = 600 * 1024 * 1024 // ~500 MB clips; keep under API / nginx body limit
+
+function formatBytes(bytes) {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function onHeroVideoChange(event) {
   const file = event.target.files?.[0]
   if (!file) return
+  if (file.size > HERO_VIDEO_MAX_BYTES) {
+    error.value = `Video is ${formatBytes(file.size)}. Max is ${formatBytes(HERO_VIDEO_MAX_BYTES)}. Compress or trim the clip, then try again.`
+    event.target.value = ''
+    return
+  }
+  error.value = ''
   if (heroForm.videoPreview?.startsWith('blob:')) URL.revokeObjectURL(heroForm.videoPreview)
   heroForm.videoFile = file
   heroForm.videoPreview = URL.createObjectURL(file)
@@ -674,7 +687,10 @@ onMounted(load)
 
     <section v-else-if="tab === 'hero'" class="panel">
       <h2 class="section-title">Hero media</h2>
-      <p class="hint">Background video and poster image for the landing hero.</p>
+      <p class="hint">
+        Background video and poster image for the landing hero. Keep the video under
+        {{ formatBytes(HERO_VIDEO_MAX_BYTES) }} (MP4 recommended).
+      </p>
 
       <div class="media-grid">
         <label class="photo-field">

@@ -48,7 +48,12 @@ export async function api(path, options = {}) {
   }
 
   if (!res.ok) {
-    const err = new Error(data?.detail || data?.message || res.statusText);
+    let message = data?.detail || data?.message || res.statusText;
+    if (res.status === 413) {
+      message =
+        "Upload is too large for the server (413). Hero videos up to ~500 MB need client_max_body_size 600M on the API reverse proxy (see sla-backend/nginx.conf).";
+    }
+    const err = new Error(message);
     err.status = res.status;
     err.data = data;
     throw err;

@@ -68,12 +68,6 @@ const heroForm = reactive({
   impact_badge: 'Best EdTech 2024',
   impact_title: 'Digital Skills for Everyone',
   impact_subtitle: 'Empowering communities. Building futures.',
-  background_video: null,
-  video_poster: null,
-  videoFile: null,
-  posterFile: null,
-  videoPreview: '',
-  posterPreview: '',
   is_active: true,
 })
 
@@ -264,14 +258,6 @@ function onGalleryImageChange(event) {
   event.target.value = ''
 }
 
-function onHeroPosterChange(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-  if (heroForm.posterPreview?.startsWith('blob:')) URL.revokeObjectURL(heroForm.posterPreview)
-  openCropper(file, 'poster')
-  event.target.value = ''
-}
-
 function openCropper(file, target) {
   if (cropSrc.value?.startsWith('blob:')) URL.revokeObjectURL(cropSrc.value)
   cropTarget.value = target
@@ -291,35 +277,10 @@ function onCropConfirm({ file, previewUrl }) {
     if (imageForm.imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imageForm.imagePreview)
     imageForm.imageFile = file
     imageForm.imagePreview = previewUrl
-  } else if (cropTarget.value === 'poster') {
-    if (heroForm.posterPreview?.startsWith('blob:')) URL.revokeObjectURL(heroForm.posterPreview)
-    heroForm.posterFile = file
-    heroForm.posterPreview = previewUrl
   }
   cropOpen.value = false
   if (cropSrc.value?.startsWith('blob:')) URL.revokeObjectURL(cropSrc.value)
   cropSrc.value = ''
-}
-
-const HERO_VIDEO_MAX_BYTES = 600 * 1024 * 1024 // ~500 MB clips; keep under API / nginx body limit
-
-function formatBytes(bytes) {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function onHeroVideoChange(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-  if (file.size > HERO_VIDEO_MAX_BYTES) {
-    error.value = `Video is ${formatBytes(file.size)}. Max is ${formatBytes(HERO_VIDEO_MAX_BYTES)}. Compress or trim the clip, then try again.`
-    event.target.value = ''
-    return
-  }
-  error.value = ''
-  if (heroForm.videoPreview?.startsWith('blob:')) URL.revokeObjectURL(heroForm.videoPreview)
-  heroForm.videoFile = file
-  heroForm.videoPreview = URL.createObjectURL(file)
 }
 
 async function notifyLanding() {
@@ -375,13 +336,7 @@ async function load() {
 
     const hero = unwrapList(heroes)[0]
     if (hero) {
-      Object.assign(heroForm, {
-        ...hero,
-        videoFile: null,
-        posterFile: null,
-        videoPreview: hero.background_video || '',
-        posterPreview: hero.video_poster || '',
-      })
+      Object.assign(heroForm, hero)
     }
 
     const gallery = unwrapList(galleries)[0]
@@ -417,35 +372,25 @@ async function saveHero() {
   error.value = ''
   saving.value = true
   try {
-    const body = new FormData()
-    const fields = [
-      'title_line_1',
-      'title_accent',
-      'description',
-      'primary_cta_label',
-      'secondary_cta_label',
-      'secondary_cta_href',
-      'impact_label',
-      'impact_badge',
-      'impact_title',
-      'impact_subtitle',
-    ]
-    fields.forEach((key) => body.append(key, heroForm[key] ?? ''))
-    body.append('is_active', heroForm.is_active ? 'true' : 'false')
-    body.append('primary_cta_action', 'open_donate')
-    if (heroForm.videoFile) body.append('background_video', heroForm.videoFile)
-    if (heroForm.posterFile) body.append('video_poster', heroForm.posterFile)
+    const body = {
+      title_line_1: heroForm.title_line_1,
+      title_accent: heroForm.title_accent,
+      description: heroForm.description,
+      primary_cta_label: heroForm.primary_cta_label,
+      secondary_cta_label: heroForm.secondary_cta_label,
+      secondary_cta_href: heroForm.secondary_cta_href,
+      impact_label: heroForm.impact_label,
+      impact_badge: heroForm.impact_badge,
+      impact_title: heroForm.impact_title,
+      impact_subtitle: heroForm.impact_subtitle,
+      is_active: heroForm.is_active,
+      primary_cta_action: 'open_donate',
+    }
 
     const saved = await cmsApi.saveHero(heroForm.id, body)
-    Object.assign(heroForm, {
-      ...saved,
-      videoFile: null,
-      posterFile: null,
-      videoPreview: saved.background_video || '',
-      posterPreview: saved.video_poster || '',
-    })
+    Object.assign(heroForm, saved)
     await notifyLanding()
-    status.value = 'Hero media & copy saved'
+    status.value = 'Hero copy saved'
   } catch (e) {
     error.value = e.message
   } finally {
@@ -687,37 +632,11 @@ onMounted(load)
     </section>
 
     <section v-else-if="tab === 'hero'" class="panel">
-      <h2 class="section-title">Hero media</h2>
-      <p class="hint">
-        Background video and poster image for the landing hero. Keep the video under
-        {{ formatBytes(HERO_VIDEO_MAX_BYTES) }} (MP4 recommended).
-      </p>
-
-      <div class="media-grid">
-        <label class="photo-field">
-          Background video (MP4)
-          <input type="file" accept="video/mp4,video/*" @change="onHeroVideoChange" />
-        </label>
-        <div v-if="heroForm.videoPreview" class="media-preview video">
-          <video :src="heroForm.videoPreview" controls muted playsinline />
-          <span class="chip">{{ heroForm.videoFile ? 'New video selected' : 'Current video' }}</span>
-        </div>
-        <div v-else class="empty-media">No hero video uploaded yet</div>
-      </div>
-
-      <div class="media-grid">
-        <label class="photo-field">
-          Poster image
-          <input type="file" accept="image/*" @change="onHeroPosterChange" />
-        </label>
-        <div v-if="heroForm.posterPreview" class="media-preview">
-          <img :src="heroForm.posterPreview" alt="Hero poster preview" />
-          <span class="chip">{{ heroForm.posterFile ? 'New poster selected' : 'Current poster' }}</span>
-        </div>
-        <div v-else class="empty-media">No poster uploaded yet</div>
-      </div>
-
       <h2 class="section-title">Hero copy</h2>
+      <p class="hint">
+        Landing hero text and CTAs. The background video is fixed in the site build
+        (<code>/video/hero.mp4</code>) and is not uploaded here.
+      </p>
       <label>Title line<input v-model="heroForm.title_line_1" /></label>
       <label>Accent line<input v-model="heroForm.title_accent" /></label>
       <label>Description<textarea v-model="heroForm.description" rows="3" /></label>

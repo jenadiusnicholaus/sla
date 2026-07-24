@@ -3,6 +3,11 @@ import { computed, reactive, ref, watch } from 'vue'
 import { cmsApi } from '@/api/client'
 import { mediaUrl } from '@/lib/mediaUrl'
 
+function hideBrokenImg(event: Event) {
+  const el = event.target as HTMLImageElement | null
+  if (el) el.style.display = 'none'
+}
+
 export interface Official {
   id?: number
   name: string
@@ -130,6 +135,7 @@ async function submit() {
               <img
                 v-if="official.photo"
                 :src="mediaUrl(official.photo)"
+                @error="hideBrokenImg"
                 :alt="official.name"
                 class="photo"
               />

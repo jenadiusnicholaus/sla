@@ -29,6 +29,21 @@ const settings = reactive({
 })
 const programs = ref([])
 const team = ref([])
+const brokenPhotos = ref(new Set())
+
+function markPhotoBroken(url) {
+  const key = mediaUrl(url) || url
+  if (!key) return
+  const next = new Set(brokenPhotos.value)
+  next.add(key)
+  brokenPhotos.value = next
+}
+
+function teamPhotoSrc(url) {
+  const src = mediaUrl(url)
+  if (!src || brokenPhotos.value.has(src)) return ''
+  return src
+}
 const values = ref([])
 const galleryImages = ref([])
 const status = ref('')
@@ -753,7 +768,13 @@ onMounted(load)
         empty-text="No team members yet — click Add member to create one."
       >
         <template #cell-photo="{ row }">
-          <img v-if="row.photo" :src="mediaUrl(row.photo)" :alt="row.name" class="table-thumb portrait" />
+          <img
+            v-if="teamPhotoSrc(row.photo)"
+            :src="teamPhotoSrc(row.photo)"
+            :alt="row.name"
+            class="table-thumb portrait"
+            @error="markPhotoBroken(row.photo)"
+          />
           <span v-else class="table-thumb portrait placeholder">{{ row.initials || '?' }}</span>
         </template>
         <template #cell-name="{ row }">

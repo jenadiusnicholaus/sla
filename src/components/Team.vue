@@ -27,6 +27,22 @@ interface Settings {
   org_name?: string
 }
 
+const brokenPhotos = ref(new Set<string>())
+
+function markPhotoBroken(url: string | null | undefined) {
+  const key = mediaUrl(url) || String(url || '')
+  if (!key) return
+  const next = new Set(brokenPhotos.value)
+  next.add(key)
+  brokenPhotos.value = next
+}
+
+function teamPhotoSrc(url: string | null | undefined) {
+  const src = mediaUrl(url)
+  if (!src || brokenPhotos.value.has(src)) return ''
+  return src
+}
+
 const props = defineProps<{
   orgChart?: OrgNode[]
   team?: TeamMember[]
@@ -353,13 +369,14 @@ onUnmounted(() => clearAuto())
             <div class="featured-visual">
               <div
                 class="portrait"
-                :class="{ 'has-photo': activeMember.photo }"
-                :style="activeMember.photo ? undefined : { background: activeMember.color || '#0a1f44' }"
+                :class="{ 'has-photo': teamPhotoSrc(activeMember.photo) }"
+                :style="teamPhotoSrc(activeMember.photo) ? undefined : { background: activeMember.color || '#0a1f44' }"
               >
                 <img
-                  v-if="activeMember.photo"
-                  :src="mediaUrl(activeMember.photo)"
+                  v-if="teamPhotoSrc(activeMember.photo)"
+                  :src="teamPhotoSrc(activeMember.photo)"
                   :alt="activeMember.name"
+                  @error="markPhotoBroken(activeMember.photo)"
                 />
                 <span v-else class="portrait-fallback">
                   {{ activeMember.initials || activeMember.name.slice(0, 1) }}
@@ -379,7 +396,12 @@ onUnmounted(() => clearAuto())
             @click="selectMember(index)"
           >
             <div class="thumb-avatar" :style="{ background: member.color || '#0a1f44' }">
-              <img v-if="member.photo" :src="mediaUrl(member.photo)" :alt="member.name" />
+              <img
+                v-if="teamPhotoSrc(member.photo)"
+                :src="teamPhotoSrc(member.photo)"
+                :alt="member.name"
+                @error="markPhotoBroken(member.photo)"
+              />
               <span v-else>{{ member.initials || member.name.slice(0, 1) }}</span>
             </div>
             <div class="thumb-meta">

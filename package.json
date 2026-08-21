@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@lucide/vue": "^1.25.0",
-    "@tailwindcss/oxide-darwin-x64": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
     "@vueuse/core": "^14.3.0",
     "class-variance-authority": "^0.7.1",

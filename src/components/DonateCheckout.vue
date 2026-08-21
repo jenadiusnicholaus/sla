@@ -148,8 +148,8 @@ async function mountCheckout(): Promise<void> {
         failureStatus.value = result.status;
         closeSdkModal();
       },
-      onClose: (result) => {
-        if (result.reason === "iframe_close") emit("close");
+      onClose: () => {
+        emit("close");
       },
     });
     checkout.open();

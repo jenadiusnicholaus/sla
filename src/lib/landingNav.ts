@@ -1,5 +1,10 @@
+export interface NavLink {
+  label: string
+  href: string
+}
+
 /** Anchor order matching HomePage section layout */
-export const LANDING_SECTION_ORDER = [
+export const LANDING_SECTION_ORDER: string[] = [
   '#home',
   '#gallery',
   '#about',
@@ -9,7 +14,7 @@ export const LANDING_SECTION_ORDER = [
   '#contact',
 ]
 
-export const DEFAULT_LANDING_NAV = [
+export const DEFAULT_LANDING_NAV: NavLink[] = [
   { label: 'Home', href: '#home' },
   { label: 'Gallery', href: '#gallery' },
   { label: 'About', href: '#about' },
@@ -19,7 +24,7 @@ export const DEFAULT_LANDING_NAV = [
   { label: 'Contact', href: '#contact' },
 ]
 
-export function sortNavByLandingOrder(links = []) {
+export function sortNavByLandingOrder(links: NavLink[] = []): NavLink[] {
   return [...links].sort((a, b) => {
     const ai = LANDING_SECTION_ORDER.indexOf(a.href)
     const bi = LANDING_SECTION_ORDER.indexOf(b.href)

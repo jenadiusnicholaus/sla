@@ -1,69 +1,76 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
-import { useIdleSession } from '@/composables/useIdleSession'
-import SessionTimeoutDialog from '@/components/backoffice/SessionTimeoutDialog.vue'
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
+import { useIdleSession } from "@/composables/useIdleSession";
+import SessionTimeoutDialog from "@/components/backoffice/SessionTimeoutDialog.vue";
 
-const { user, logout } = useAuth()
-const { showWarning, secondsLeft, start, stop, stayLoggedIn, confirmLogout } = useIdleSession()
-const router = useRouter()
-const route = useRoute()
-const search = ref('')
-const mobileOpen = ref(false)
+const { user, logout } = useAuth();
+const { showWarning, secondsLeft, start, stop, stayLoggedIn, confirmLogout } =
+  useIdleSession();
+const router = useRouter();
+const route = useRoute();
+const search = ref("");
+const mobileOpen = ref(false);
 
 const menuLinks = [
-  { to: '/backoffice', label: 'Overview', icon: 'dashboard', exact: true },
-  { to: '/backoffice/analytics', label: 'Statistics', icon: 'bar_chart' },
-  { to: '/backoffice/messages', label: 'Messages', icon: 'mail' },
-  { to: '/backoffice/meetings', label: 'Meetings', icon: 'event' },
-  { to: '/backoffice/profiles', label: 'Profiles', icon: 'group' },
-  { to: '/backoffice/qr', label: 'QR Codes', icon: 'qr_code_2' },
-  { to: '/backoffice/cms', label: 'CMS', icon: 'web' },
-]
+  { to: "/backoffice", label: "Overview", icon: "dashboard", exact: true },
+  { to: "/backoffice/analytics", label: "Statistics", icon: "bar_chart" },
+  { to: "/backoffice/messages", label: "Messages", icon: "mail" },
+  { to: "/backoffice/meetings", label: "Meetings", icon: "event" },
+  { to: "/backoffice/donations", label: "Donations", icon: "payments" },
+  { to: "/backoffice/profiles", label: "Profiles", icon: "group" },
+  { to: "/backoffice/qr", label: "QR Codes", icon: "qr_code_2" },
+  { to: "/backoffice/cms", label: "CMS", icon: "web" },
+];
 
 const generalLinks = [
-  { to: '/backoffice/cms', label: 'Website settings', icon: 'settings', match: '/backoffice/cms' },
-]
+  {
+    to: "/backoffice/cms",
+    label: "Website settings",
+    icon: "settings",
+    match: "/backoffice/cms",
+  },
+];
 
 function isActive(link) {
-  if (link.exact) return route.path === link.to
-  const base = link.match || link.to
-  return route.path === base || route.path.startsWith(`${base}/`)
+  if (link.exact) return route.path === link.to;
+  const base = link.match || link.to;
+  return route.path === base || route.path.startsWith(`${base}/`);
 }
 
 function go(to) {
-  mobileOpen.value = false
-  router.push(to)
+  mobileOpen.value = false;
+  router.push(to);
 }
 
 function signOut() {
-  stop()
-  logout()
-  router.push('/backoffice/login')
+  stop();
+  logout();
+  router.push("/backoffice/login");
 }
 
 function handleSessionExpired() {
-  logout()
-  router.push('/backoffice/login')
+  logout();
+  router.push("/backoffice/login");
 }
 
 onMounted(() => {
-  start({ onExpire: handleSessionExpired })
-})
+  start({ onExpire: handleSessionExpired });
+});
 
 onUnmounted(() => {
-  stop()
-})
+  stop();
+});
 
 const initials = computed(() => {
-  const name = user.value?.first_name || user.value?.username || 'A'
-  return String(name).slice(0, 1).toUpperCase()
-})
+  const name = user.value?.first_name || user.value?.username || "A";
+  return String(name).slice(0, 1).toUpperCase();
+});
 
 const displayName = computed(
-  () => user.value?.first_name || user.value?.username || 'Admin',
-)
+  () => user.value?.first_name || user.value?.username || "Admin",
+);
 </script>
 
 <template>
@@ -115,7 +122,7 @@ const displayName = computed(
         <VaAvatar color="#ff6a00" size="small">{{ initials }}</VaAvatar>
         <div class="user-meta">
           <strong>{{ displayName }}</strong>
-          <span>{{ user?.email || user?.role || 'Backoffice' }}</span>
+          <span>{{ user?.email || user?.role || "Backoffice" }}</span>
         </div>
         <VaButton
           preset="plain"
@@ -157,8 +164,16 @@ const displayName = computed(
         </VaInput>
 
         <div class="top-actions">
-          <VaButton preset="secondary" icon="notifications" aria-label="Notifications" />
-          <VaButton color="primary" icon="add" @click="go('/backoffice/qr/new')">
+          <VaButton
+            preset="secondary"
+            icon="notifications"
+            aria-label="Notifications"
+          />
+          <VaButton
+            color="primary"
+            icon="add"
+            @click="go('/backoffice/qr/new')"
+          >
             Create Smart QR
           </VaButton>
         </div>
@@ -197,7 +212,11 @@ const displayName = computed(
 }
 
 .bo-sidebar {
-  background: linear-gradient(180deg, var(--sla-navy) 0%, var(--sla-navy-deep) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--sla-navy) 0%,
+    var(--sla-navy-deep) 100%
+  );
   color: #fff;
   padding: 1.25rem 1rem 1rem;
   display: flex;
@@ -264,7 +283,9 @@ const displayName = computed(
   cursor: pointer;
   text-align: left;
   position: relative;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.06);
@@ -275,7 +296,7 @@ const displayName = computed(
   color: #fff;
 }
 .nav-item.active::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 20%;
@@ -338,8 +359,12 @@ const displayName = computed(
   align-items: center;
   gap: 0.55rem;
 }
-.menu-btn { display: none; }
-.top-search { width: 100%; }
+.menu-btn {
+  display: none;
+}
+.top-search {
+  width: 100%;
+}
 
 .bo-content {
   padding: 1.25rem 1.5rem 2rem;
@@ -370,7 +395,9 @@ const displayName = computed(
   .bo-shell.nav-open .bo-sidebar {
     transform: translateX(0);
   }
-  .menu-btn { display: inline-flex; }
+  .menu-btn {
+    display: inline-flex;
+  }
   .backdrop {
     display: block;
     position: fixed;
@@ -380,7 +407,11 @@ const displayName = computed(
     z-index: 25;
     cursor: pointer;
   }
-  .top-search { display: none; }
-  .workspace-btn { max-width: 160px; }
+  .top-search {
+    display: none;
+  }
+  .workspace-btn {
+    max-width: 160px;
+  }
 }
 </style>

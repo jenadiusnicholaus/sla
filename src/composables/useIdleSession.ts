@@ -4,32 +4,32 @@ const IDLE_TIMEOUT_MS = 5 * 60 * 1000
 const WARNING_COUNTDOWN_SEC = 30
 const ACTIVITY_THROTTLE_MS = 1000
 
-const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
+const ACTIVITY_EVENTS: string[] = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click']
 
 const showWarning = ref(false)
 const secondsLeft = ref(WARNING_COUNTDOWN_SEC)
 
-let idleTimer = null
-let countdownTimer = null
+let idleTimer: ReturnType<typeof setTimeout> | null = null
+let countdownTimer: ReturnType<typeof setInterval> | null = null
 let listenersBound = false
 let lastActivityAt = 0
-let onExpireCallback = null
+let onExpireCallback: (() => void) | null = null
 
-function clearIdleTimer() {
+function clearIdleTimer(): void {
   if (idleTimer) {
     clearTimeout(idleTimer)
     idleTimer = null
   }
 }
 
-function clearCountdownTimer() {
+function clearCountdownTimer(): void {
   if (countdownTimer) {
     clearInterval(countdownTimer)
     countdownTimer = null
   }
 }
 
-function openWarning() {
+function openWarning(): void {
   clearIdleTimer()
   showWarning.value = true
   secondsLeft.value = WARNING_COUNTDOWN_SEC
@@ -44,13 +44,13 @@ function openWarning() {
   }, 1000)
 }
 
-function resetIdleTimer() {
+function resetIdleTimer(): void {
   if (showWarning.value) return
   clearIdleTimer()
   idleTimer = setTimeout(openWarning, IDLE_TIMEOUT_MS)
 }
 
-function onActivity() {
+function onActivity(): void {
   if (showWarning.value) return
   const now = Date.now()
   if (now - lastActivityAt < ACTIVITY_THROTTLE_MS) return
@@ -58,7 +58,7 @@ function onActivity() {
   resetIdleTimer()
 }
 
-function bindListeners() {
+function bindListeners(): void {
   if (listenersBound) return
   ACTIVITY_EVENTS.forEach((event) => {
     window.addEventListener(event, onActivity, { passive: true })
@@ -66,7 +66,7 @@ function bindListeners() {
   listenersBound = true
 }
 
-function unbindListeners() {
+function unbindListeners(): void {
   if (!listenersBound) return
   ACTIVITY_EVENTS.forEach((event) => {
     window.removeEventListener(event, onActivity)
@@ -74,13 +74,13 @@ function unbindListeners() {
   listenersBound = false
 }
 
-function expireSession() {
+function expireSession(): void {
   const callback = onExpireCallback
   stopIdleSession()
   callback?.()
 }
 
-export function stopIdleSession() {
+export function stopIdleSession(): void {
   clearIdleTimer()
   clearCountdownTimer()
   unbindListeners()
@@ -90,16 +90,20 @@ export function stopIdleSession() {
   lastActivityAt = 0
 }
 
+interface IdleSessionOptions {
+  onExpire?: () => void
+}
+
 export function useIdleSession() {
-  function start({ onExpire } = {}) {
+  function start({ onExpire }: IdleSessionOptions = {}): void {
     stopIdleSession()
-    onExpireCallback = onExpire
+    onExpireCallback = onExpire ?? null
     bindListeners()
     lastActivityAt = Date.now()
     resetIdleTimer()
   }
 
-  function stayLoggedIn() {
+  function stayLoggedIn(): void {
     showWarning.value = false
     clearCountdownTimer()
     secondsLeft.value = WARNING_COUNTDOWN_SEC
@@ -107,7 +111,7 @@ export function useIdleSession() {
     resetIdleTimer()
   }
 
-  function confirmLogout() {
+  function confirmLogout(): void {
     expireSession()
   }
 

@@ -9,10 +9,13 @@ import Services from "../components/Services.vue";
 import Team from "../components/Team.vue";
 import Contact from "../components/Contact.vue";
 import Footer from "../components/Footer.vue";
-import DonatePage from "../components/DonatePage.vue";
+import DonateCheckout from "../components/DonateCheckout.vue";
 import { useHomepageCms } from "@/composables/useHomepageCms";
 
-const showDonateModal = ref<boolean>(false);
+const donateOpen = ref(false);
+const openPayit = (): void => {
+  donateOpen.value = true;
+};
 const {
   useLiveHomepage,
   settings,
@@ -25,7 +28,6 @@ const {
   orgChart,
   team,
   socialLinks,
-  donate,
   statsFor,
   navFor,
 } = useHomepageCms();
@@ -44,32 +46,18 @@ useLiveHomepage();
       :announcement="announcement"
       :nav="headerNav"
       :settings="settings"
-      @open-donate="showDonateModal = true"
+      @open-donate="openPayit"
     />
-    <Hero
-      :hero="hero"
-      :stats="heroStats"
-      @open-donate="showDonateModal = true"
-    />
+    <Hero :hero="hero" :stats="heroStats" @open-donate="openPayit" />
     <ImageGallery :gallery="gallery" />
     <About :about="about" :stats="aboutStats" />
     <BrandValues :values="values" />
     <Services :programs="programs" />
     <Team :org-chart="orgChart" :team="team" :settings="settings" />
     <Contact :settings="settings" :social-links="socialLinks" />
-    <Footer
-      :settings="settings"
-      :nav="footerNav"
-      :social-links="socialLinks"
-    />
+    <Footer :settings="settings" :nav="footerNav" :social-links="socialLinks" />
 
-    <transition name="fade">
-      <DonatePage
-        v-if="showDonateModal"
-        :donate="donate"
-        @close="showDonateModal = false"
-      />
-    </transition>
+    <DonateCheckout :open="donateOpen" @close="donateOpen = false" />
   </div>
 </template>
 

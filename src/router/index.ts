@@ -86,6 +86,11 @@ const routes = [
         name: "backoffice-donations",
         component: () => import("@/pages/backoffice/DonationsPage.vue"),
       },
+      {
+        path: "events",
+        name: "backoffice-events",
+        component: () => import("@/pages/backoffice/EventsPage.vue"),
+      },
     ],
   },
 ];

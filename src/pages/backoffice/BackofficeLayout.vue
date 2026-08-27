@@ -15,11 +15,11 @@ const mobileOpen = ref(false);
 
 const menuLinks = [
   { to: "/backoffice", label: "Overview", icon: "dashboard", exact: true },
+  { to: "/backoffice/events", label: "Events", icon: "calendar_month" },
   { to: "/backoffice/analytics", label: "Statistics", icon: "bar_chart" },
   { to: "/backoffice/messages", label: "Messages", icon: "mail" },
   { to: "/backoffice/meetings", label: "Meetings", icon: "event" },
   { to: "/backoffice/donations", label: "Donations", icon: "payments" },
-  { to: "/backoffice/events", label: "Events", icon: "calendar_month" },
   { to: "/backoffice/profiles", label: "Profiles", icon: "group" },
   { to: "/backoffice/qr", label: "QR Codes", icon: "qr_code_2" },
   { to: "/backoffice/cms", label: "CMS", icon: "web" },

@@ -55,10 +55,14 @@ const visible = computed(() => {
 
 const totalEvents = computed(() => stats.value?.total ?? items.value.length);
 const publishedCount = computed(
-  () => stats.value?.published ?? items.value.filter((i) => i.status === "published").length,
+  () =>
+    stats.value?.published ??
+    items.value.filter((i) => i.status === "published").length,
 );
 const upcomingCount = computed(
-  () => stats.value?.upcoming ?? items.value.filter((i) => i.status === "published").length,
+  () =>
+    stats.value?.upcoming ??
+    items.value.filter((i) => i.status === "published").length,
 );
 
 const tableColumns = [
@@ -311,7 +315,9 @@ onMounted(load);
         <template #cell(title)="{ rowData }">
           <div class="cell-title">
             <span class="event-title">{{ rowData.title }}</span>
-            <span v-if="rowData._raw.is_featured" class="featured-badge">Featured</span>
+            <span v-if="rowData._raw.is_featured" class="featured-badge"
+              >Featured</span
+            >
           </div>
         </template>
         <template #cell(status)="{ rowData }">
@@ -337,22 +343,43 @@ onMounted(load);
         <div class="modal-card">
           <div class="modal-head">
             <h2>{{ isNew ? "New Event" : "Edit Event" }}</h2>
-            <button type="button" class="modal-close" aria-label="Close" @click="closeDetail">
+            <button
+              type="button"
+              class="modal-close"
+              aria-label="Close"
+              @click="closeDetail"
+            >
               ✕
             </button>
           </div>
           <div class="form-grid">
+            <div v-if="editForm.cover_image_url" class="cover-preview span-2">
+              <img :src="editForm.cover_image_url" alt="Cover image preview" />
+              <span>Cover preview</span>
+            </div>
             <div class="form-field">
               <label>Title</label>
-              <input v-model="editForm.title" type="text" placeholder="Event title" />
+              <input
+                v-model="editForm.title"
+                type="text"
+                placeholder="Event title"
+              />
             </div>
             <div class="form-field">
               <label>Location</label>
-              <input v-model="editForm.location" type="text" placeholder="Event location" />
+              <input
+                v-model="editForm.location"
+                type="text"
+                placeholder="Event location"
+              />
             </div>
             <div class="form-field span-2">
               <label>Description</label>
-              <textarea v-model="editForm.description" rows="3" placeholder="Description" />
+              <textarea
+                v-model="editForm.description"
+                rows="3"
+                placeholder="Description"
+              />
             </div>
             <div class="form-field">
               <label>Start</label>
@@ -372,11 +399,20 @@ onMounted(load);
             </div>
             <div class="form-field">
               <label>Max Attendees</label>
-              <input v-model="editForm.max_attendees" type="number" min="0" placeholder="Unlimited" />
+              <input
+                v-model="editForm.max_attendees"
+                type="number"
+                min="0"
+                placeholder="Unlimited"
+              />
             </div>
             <div class="form-field span-2">
               <label>Cover Image URL</label>
-              <input v-model="editForm.cover_image_url" type="text" placeholder="https://…" />
+              <input
+                v-model="editForm.cover_image_url"
+                type="text"
+                placeholder="https://…"
+              />
             </div>
             <div class="form-field">
               <label class="check-label">
@@ -386,10 +422,20 @@ onMounted(load);
             </div>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn-ghost" :disabled="saving" @click="closeDetail">
+            <button
+              type="button"
+              class="btn-ghost"
+              :disabled="saving"
+              @click="closeDetail"
+            >
               Cancel
             </button>
-            <button type="button" class="btn-primary" :disabled="saving" @click="save">
+            <button
+              type="button"
+              class="btn-primary"
+              :disabled="saving"
+              @click="save"
+            >
               {{ saving ? "Saving…" : isNew ? "Create Event" : "Save Changes" }}
             </button>
           </div>
@@ -398,17 +444,34 @@ onMounted(load);
     </Transition>
 
     <Transition name="fade">
-      <div v-if="deleteConfirmOpen" class="modal-overlay" @click.self="deleteConfirmOpen = false">
+      <div
+        v-if="deleteConfirmOpen"
+        class="modal-overlay"
+        @click.self="deleteConfirmOpen = false"
+      >
         <div class="modal-card small">
           <div class="modal-head">
             <h2>Delete Event</h2>
           </div>
           <p class="delete-warning">
-            Are you sure you want to delete <strong>{{ selected?.title }}</strong>?
+            Are you sure you want to delete
+            <strong>{{ selected?.title }}</strong
+            >?
           </p>
           <div class="modal-actions">
-            <button type="button" class="btn-ghost" @click="deleteConfirmOpen = false">Cancel</button>
-            <button type="button" class="btn-danger" :disabled="saving" @click="confirmDelete">
+            <button
+              type="button"
+              class="btn-ghost"
+              @click="deleteConfirmOpen = false"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn-danger"
+              :disabled="saving"
+              @click="confirmDelete"
+            >
               {{ saving ? "Deleting…" : "Delete" }}
             </button>
           </div>
@@ -480,8 +543,12 @@ onMounted(load);
   border-radius: 12px;
   padding: 1rem;
 }
-.stat-card.success { border-top: 3px solid #10b981; }
-.stat-card.pending { border-top: 3px solid #f59e0b; }
+.stat-card.success {
+  border-top: 3px solid #10b981;
+}
+.stat-card.pending {
+  border-top: 3px solid #f59e0b;
+}
 .stat-value {
   display: block;
   font-size: 1.6rem;
@@ -551,8 +618,14 @@ onMounted(load);
   margin-bottom: 1rem;
   font-size: 0.9rem;
 }
-.banner.err { background: #fef3f2; color: #b42318; }
-.banner.ok { background: #ecfdf3; color: #0a7a3d; }
+.banner.err {
+  background: #fef3f2;
+  color: #b42318;
+}
+.banner.ok {
+  background: #ecfdf3;
+  color: #0a7a3d;
+}
 .table-card {
   background: #fff;
   border: 1px solid #e6ebf2;
@@ -594,16 +667,44 @@ onMounted(load);
   font-weight: 700;
   text-transform: capitalize;
 }
-.status-tag[data-status="published"] { background: #ecfdf3; color: #0a7a3d; }
-.status-tag[data-status="draft"] { background: #fff7ed; color: #9a3412; }
-.status-tag[data-status="cancelled"] { background: #fef3f2; color: #b42318; }
+.status-tag[data-status="published"] {
+  background: #ecfdf3;
+  color: #0a7a3d;
+}
+.status-tag[data-status="draft"] {
+  background: #fff7ed;
+  color: #9a3412;
+}
+.status-tag[data-status="cancelled"] {
+  background: #fef3f2;
+  color: #b42318;
+}
+.cover-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.cover-preview img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e6ebf2;
+  background: #f7f9fb;
+}
+.cover-preview span {
+  font-size: 0.75rem;
+  color: #8b98a9;
+}
 .row-action {
   background: transparent;
   border: 0;
   color: #8b98a9;
   cursor: pointer;
 }
-.row-action:hover { color: #b42318; }
+.row-action:hover {
+  color: #b42318;
+}
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -621,7 +722,9 @@ onMounted(load);
   overflow-y: auto;
   box-shadow: 0 24px 60px rgba(10, 31, 68, 0.24);
 }
-.modal-card.small { width: min(400px, 100%); }
+.modal-card.small {
+  width: min(400px, 100%);
+}
 .modal-head {
   display: flex;
   align-items: center;
@@ -654,7 +757,9 @@ onMounted(load);
   flex-direction: column;
   gap: 0.35rem;
 }
-.form-field.span-2 { grid-column: span 2; }
+.form-field.span-2 {
+  grid-column: span 2;
+}
 .form-field label {
   font-size: 0.8rem;
   font-weight: 600;
@@ -671,7 +776,9 @@ onMounted(load);
 }
 .form-field input:focus,
 .form-field select:focus,
-.form-field textarea:focus { border-color: #ff6a00; }
+.form-field textarea:focus {
+  border-color: #ff6a00;
+}
 .check-label {
   display: flex;
   align-items: center;
@@ -693,22 +800,44 @@ onMounted(load);
   border: 0;
   cursor: pointer;
 }
-.btn-primary { background: #ff6a00; color: #fff; }
-.btn-ghost { background: #f2f5f9; color: #0a1f44; }
-.btn-danger { background: #b42318; color: #fff; }
+.btn-primary {
+  background: #ff6a00;
+  color: #fff;
+}
+.btn-ghost {
+  background: #f2f5f9;
+  color: #0a1f44;
+}
+.btn-danger {
+  background: #b42318;
+  color: #fff;
+}
 .delete-warning {
   padding: 1.25rem;
   margin: 0;
   color: #5b6b82;
 }
 .fade-enter-active,
-.fade-leave-active { transition: opacity 0.2s ease; }
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
 .fade-enter-from,
-.fade-leave-to { opacity: 0; }
+.fade-leave-to {
+  opacity: 0;
+}
 @media (max-width: 640px) {
-  .form-grid { grid-template-columns: 1fr; }
-  .form-field.span-2 { grid-column: span 1; }
-  .page-header { flex-direction: column; }
-  .toolbar-row { flex-direction: column; align-items: stretch; }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-field.span-2 {
+    grid-column: span 1;
+  }
+  .page-header {
+    flex-direction: column;
+  }
+  .toolbar-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

@@ -50,7 +50,7 @@ export interface FocusArea {
   description: string;
   accent_color: string;
   badge_color: string;
-  image_url: string;
+  image: string;
   order: number;
 }
 
@@ -58,7 +58,7 @@ export interface Partner {
   id: string;
   event: string;
   name: string;
-  logo_url: string;
+  logo: string;
   tier: "HOST" | "LEAD_PARTNER" | "PARTNER" | "MEDIA";
   website_url: string;
   order: number;
@@ -175,7 +175,7 @@ export interface Speaker {
   initials: string;
   color: string;
   accent_light: string;
-  photo_url: string;
+  photo: string;
   bio: string;
   order: number;
   is_confirmed: boolean;

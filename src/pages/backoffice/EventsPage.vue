@@ -23,6 +23,7 @@ import type {
   Registration,
   DashboardMetrics,
 } from "@/api/events";
+import { MEDIA_BASE } from "@/api/client";
 
 const loading = ref(false);
 const saving = ref(false);
@@ -125,6 +126,13 @@ function toLocal(v: string) {
 function fromLocal(v: string) {
   if (!v) return null;
   return new Date(v).toISOString();
+}
+
+function resolveMediaUrl(path: string): string {
+  if (!path) return "";
+  if (/^(https?:|data:)/.test(path)) return path;
+  const base = MEDIA_BASE.endsWith("/") ? MEDIA_BASE : MEDIA_BASE + "/";
+  return base + (path.startsWith("/") ? path.slice(1) : path);
 }
 
 function toBase64(file: File): Promise<string> {
@@ -379,7 +387,7 @@ function openSub(kind: typeof subKind.value, item?: unknown) {
       description: "",
       accent_color: "#F97316",
       badge_color: "#EA580C",
-      image_url: "",
+      image: "",
       order: 1,
     };
     if (item) {
@@ -391,7 +399,7 @@ function openSub(kind: typeof subKind.value, item?: unknown) {
     const base = {
       event: eventId,
       name: "",
-      logo_url: "",
+      logo: "",
       tier: "HOST",
       website_url: "",
       order: 1,
@@ -429,7 +437,7 @@ function openSub(kind: typeof subKind.value, item?: unknown) {
       initials: "",
       color: "#1E40AF",
       accent_light: "#DBEAFE",
-      photo_url: "",
+      photo: "",
       bio: "",
       order: 1,
       is_confirmed: false,
@@ -797,6 +805,14 @@ onMounted(load);
             <dt>Published</dt>
             <dd>{{ selected?.is_published }}</dd>
           </dl>
+          <div v-if="selected?.hero_images?.length" class="hero-gallery">
+            <img
+              v-for="(src, idx) in selected.hero_images"
+              :key="idx"
+              :src="resolveMediaUrl(src)"
+              class="hero-thumb"
+            />
+          </div>
         </div>
 
         <div v-else-if="activeTab === 'stats'" class="tab-body">
@@ -838,7 +854,11 @@ onMounted(load);
               :key="f.id"
               class="focus-card"
             >
-              <img v-if="f.image_url" :src="f.image_url" :alt="f.title" />
+              <img
+                v-if="f.image"
+                :src="resolveMediaUrl(f.image)"
+                :alt="f.title"
+              />
               <div class="focus-meta">
                 <span class="focus-num">{{ f.num }}</span>
                 <h4>{{ f.title }}</h4>
@@ -866,6 +886,7 @@ onMounted(load);
             :items="selected?.partners || []"
             :columns="[
               { key: 'name', label: 'Name' },
+              { key: 'logo', label: 'Logo' },
               { key: 'tier', label: 'Tier' },
               { key: 'website_url', label: 'Website' },
               { key: 'order', label: 'Order' },
@@ -873,6 +894,14 @@ onMounted(load);
             ]"
             hoverable
           >
+            <template #cell(logo)="{ rowData }">
+              <img
+                v-if="rowData.logo"
+                :src="resolveMediaUrl(rowData.logo)"
+                class="row-img"
+                :alt="rowData.name"
+              />
+            </template>
             <template #cell(actions)="{ rowData }">
               <button class="row-action" @click="openSub('partner', rowData)">
                 <VaIcon name="edit" size="18px" />
@@ -897,6 +926,7 @@ onMounted(load);
             :items="selected?.villages || []"
             :columns="[
               { key: 'name', label: 'Name' },
+              { key: 'hero_image', label: 'Hero' },
               { key: 'hall', label: 'Hall' },
               { key: 'booths_count', label: 'Booths' },
               { key: 'demos_count', label: 'Demos' },
@@ -905,6 +935,14 @@ onMounted(load);
             ]"
             hoverable
           >
+            <template #cell(hero_image)="{ rowData }">
+              <img
+                v-if="rowData.hero_image"
+                :src="resolveMediaUrl(rowData.hero_image)"
+                class="row-img"
+                :alt="rowData.name"
+              />
+            </template>
             <template #cell(actions)="{ rowData }">
               <button class="row-action" @click="openSub('village', rowData)">
                 <VaIcon name="edit" size="18px" />
@@ -929,6 +967,7 @@ onMounted(load);
             :items="selected?.speakers || []"
             :columns="[
               { key: 'name', label: 'Name' },
+              { key: 'photo', label: 'Photo' },
               { key: 'title', label: 'Title' },
               { key: 'org', label: 'Org' },
               { key: 'is_confirmed', label: 'Confirmed' },
@@ -937,6 +976,14 @@ onMounted(load);
             ]"
             hoverable
           >
+            <template #cell(photo)="{ rowData }">
+              <img
+                v-if="rowData.photo"
+                :src="resolveMediaUrl(rowData.photo)"
+                class="row-img"
+                :alt="rowData.name"
+              />
+            </template>
             <template #cell(actions)="{ rowData }">
               <button class="row-action" @click="openSub('speaker', rowData)">
                 <VaIcon name="edit" size="18px" />
@@ -1135,12 +1182,12 @@ onMounted(load);
                 ><input v-model="subForm.badge_color" type="color" />
               </div>
               <div class="form-field span-2">
-                <label>Image URL</label
-                ><input v-model="subForm.image_url" type="text" />
+                <label>Image</label
+                ><input v-model="subForm.image" type="text" />
                 <input
                   type="file"
                   accept="image/*"
-                  @change="onImageFile($event, 'sub', 'image_url')"
+                  @change="onImageFile($event, 'sub', 'image')"
                 />
               </div>
               <div class="form-field">
@@ -1221,12 +1268,12 @@ onMounted(load);
                 <input v-model="subForm.accent_light" type="color" />
               </div>
               <div class="form-field span-2">
-                <label>Photo URL</label>
-                <input v-model="subForm.photo_url" type="text" />
+                <label>Photo</label>
+                <input v-model="subForm.photo" type="text" />
                 <input
                   type="file"
                   accept="image/*"
-                  @change="onImageFile($event, 'sub', 'photo_url')"
+                  @change="onImageFile($event, 'sub', 'photo')"
                 />
               </div>
               <div class="form-field span-2">
@@ -1321,12 +1368,11 @@ onMounted(load);
                 <label>Name</label><input v-model="subForm.name" type="text" />
               </div>
               <div class="form-field span-2">
-                <label>Logo URL</label
-                ><input v-model="subForm.logo_url" type="text" />
+                <label>Logo</label><input v-model="subForm.logo" type="text" />
                 <input
                   type="file"
                   accept="image/*"
-                  @change="onImageFile($event, 'sub', 'logo_url')"
+                  @change="onImageFile($event, 'sub', 'logo')"
                 />
               </div>
               <div class="form-field">
@@ -1726,5 +1772,25 @@ onMounted(load);
   max-height: none;
   box-shadow: none;
   border-radius: 0;
+}
+.hero-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.hero-thumb {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e6ebf2;
+}
+.row-img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e6ebf2;
 }
 </style>

@@ -1,6 +1,10 @@
 const API_BASE =
   import.meta.env.VITE_API_URL || "https://api.streetlabsafrica.org/api";
 
+export const MEDIA_BASE =
+  (API_BASE.replace(/\/?api\/?$/, "") || "https://api.streetlabsafrica.org") +
+  "/media/";
+
 function getToken(): string | null {
   return localStorage.getItem("sla_access_token");
 }

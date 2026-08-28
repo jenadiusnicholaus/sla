@@ -5,12 +5,22 @@ import {
   eventStatsApi,
   focusAreasApi,
   partnersApi,
+  villagesApi,
+  speakersApi,
+  sessionsApi,
+  boothApplicationsApi,
+  registrationsApi,
 } from "@/api/events";
 import type {
   ExpoEvent,
   EventStat,
   FocusArea,
   Partner,
+  Village,
+  Speaker,
+  Session,
+  BoothApplication,
+  Registration,
   DashboardMetrics,
 } from "@/api/events";
 
@@ -54,7 +64,16 @@ const eventForm = ref<Record<string, any>>({
 });
 
 const subForm = ref<Record<string, any>>({});
-const subKind = ref<"stat" | "focus" | "partner">("stat");
+const subKind = ref<
+  | "stat"
+  | "focus"
+  | "partner"
+  | "village"
+  | "speaker"
+  | "session"
+  | "booth"
+  | "registration"
+>("stat");
 const subEditingId = ref<string | null>(null);
 
 const tableColumns = [
@@ -299,26 +318,32 @@ const subLabels: Record<typeof subKind.value, string> = {
   stat: "Stat",
   focus: "Focus Area",
   partner: "Partner",
+  village: "Village",
+  speaker: "Speaker",
+  session: "Session",
+  booth: "Booth Application",
+  registration: "Registration",
 };
 
-function openSub(kind: "stat" | "focus" | "partner", item?: unknown) {
+function openSub(kind: typeof subKind.value, item?: unknown) {
   subKind.value = kind;
   subEditingId.value = null;
+  const eventId = selected.value?.id;
+
+  function setDefaults(form: Record<string, any>, edit: Record<string, any>) {
+    subForm.value = { ...form, ...edit };
+  }
+
   if (kind === "stat") {
-    subForm.value = {
-      event: selected.value?.id,
-      label: "",
-      value: "",
-      order: 1,
-    };
+    const base = { event: eventId, label: "", value: "", order: 1 };
     if (item) {
       const s = item as EventStat;
       subEditingId.value = s.id;
-      subForm.value = { ...s };
-    }
+      setDefaults(base, { ...s });
+    } else setDefaults(base, {});
   } else if (kind === "focus") {
-    subForm.value = {
-      event: selected.value?.id,
+    const base = {
+      event: eventId,
       num: "01",
       title: "",
       description: "",
@@ -330,11 +355,11 @@ function openSub(kind: "stat" | "focus" | "partner", item?: unknown) {
     if (item) {
       const f = item as FocusArea;
       subEditingId.value = f.id;
-      subForm.value = { ...f };
-    }
-  } else {
-    subForm.value = {
-      event: selected.value?.id,
+      setDefaults(base, { ...f });
+    } else setDefaults(base, {});
+  } else if (kind === "partner") {
+    const base = {
+      event: eventId,
       name: "",
       logo_url: "",
       tier: "HOST",
@@ -344,9 +369,88 @@ function openSub(kind: "stat" | "focus" | "partner", item?: unknown) {
     if (item) {
       const p = item as Partner;
       subEditingId.value = p.id;
-      subForm.value = { ...p };
-    }
+      setDefaults(base, { ...p });
+    } else setDefaults(base, {});
+  } else if (kind === "village") {
+    const base = {
+      event: eventId,
+      name: "",
+      slug: "",
+      hall: "",
+      emoji: "",
+      theme_color: "#2563EB",
+      tagline: "",
+      description: "",
+      hero_image: "",
+      stats: "[]",
+      order: 1,
+    };
+    if (item) {
+      const v = item as Village;
+      subEditingId.value = v.slug;
+      setDefaults(base, { ...v, stats: JSON.stringify(v.stats || []) });
+    } else setDefaults(base, {});
+  } else if (kind === "speaker") {
+    const base = {
+      event: eventId,
+      name: "",
+      title: "",
+      org: "",
+      initials: "",
+      color: "#1E40AF",
+      accent_light: "#DBEAFE",
+      photo_url: "",
+      bio: "",
+      order: 1,
+      is_confirmed: false,
+    };
+    if (item) {
+      const s = item as Speaker;
+      subEditingId.value = s.id;
+      setDefaults(base, { ...s });
+    } else setDefaults(base, {});
+  } else if (kind === "session") {
+    const base = {
+      event: eventId,
+      day_number: 1,
+      start_time: "",
+      end_time: "",
+      title: "",
+      type: "KEYNOTE",
+      speaker_id: "",
+      speaker_text: "",
+      location: "",
+      order: 1,
+    };
+    if (item) {
+      const s = item as Session;
+      subEditingId.value = s.id;
+      setDefaults(base, { ...s });
+    } else setDefaults(base, {});
+  } else if (kind === "booth") {
+    const base = {
+      status: "PENDING_REVIEW",
+      assigned_booth_no: "",
+      admin_notes: "",
+    };
+    if (item) {
+      const b = item as BoothApplication;
+      subEditingId.value = b.id;
+      setDefaults(base, {
+        status: b.status,
+        assigned_booth_no: b.assigned_booth_no,
+        admin_notes: b.admin_notes,
+      });
+    } else setDefaults(base, {});
+  } else if (kind === "registration") {
+    const base = { status: "PENDING" };
+    if (item) {
+      const r = item as Registration;
+      subEditingId.value = r.id;
+      setDefaults(base, { status: r.status });
+    } else setDefaults(base, {});
   }
+
   subModalOpen.value = true;
   msg.value = "";
 }
@@ -358,23 +462,36 @@ async function saveSub() {
   try {
     const body = { ...subForm.value };
     if (subKind.value === "stat") {
-      if (subEditingId.value) {
+      if (subEditingId.value)
         await eventStatsApi.update(subEditingId.value, body);
-      } else {
-        await eventStatsApi.create(body);
-      }
+      else await eventStatsApi.create(body);
     } else if (subKind.value === "focus") {
-      if (subEditingId.value) {
+      if (subEditingId.value)
         await focusAreasApi.update(subEditingId.value, body);
-      } else {
-        await focusAreasApi.create(body);
-      }
-    } else {
-      if (subEditingId.value) {
+      else await focusAreasApi.create(body);
+    } else if (subKind.value === "partner") {
+      if (subEditingId.value)
         await partnersApi.update(subEditingId.value, body);
-      } else {
-        await partnersApi.create(body);
-      }
+      else await partnersApi.create(body);
+    } else if (subKind.value === "village") {
+      if (typeof body.stats === "string") body.stats = JSON.parse(body.stats);
+      if (subEditingId.value)
+        await villagesApi.update(subEditingId.value, body);
+      else await villagesApi.create(body);
+    } else if (subKind.value === "speaker") {
+      if (subEditingId.value)
+        await speakersApi.update(subEditingId.value, body);
+      else await speakersApi.create(body);
+    } else if (subKind.value === "session") {
+      if (subEditingId.value)
+        await sessionsApi.update(subEditingId.value, body);
+      else await sessionsApi.create(body);
+    } else if (subKind.value === "booth") {
+      if (subEditingId.value)
+        await boothApplicationsApi.update(subEditingId.value, body);
+    } else if (subKind.value === "registration") {
+      if (subEditingId.value)
+        await registrationsApi.update(subEditingId.value, body);
     }
     subModalOpen.value = false;
     msg.value = subEditingId.value ? "Updated" : "Created";
@@ -386,13 +503,18 @@ async function saveSub() {
   }
 }
 
-async function removeSub(kind: "stat" | "focus" | "partner", id: string) {
+async function removeSub(kind: typeof subKind.value, id: string) {
   if (!selected.value) return;
   if (!confirm("Delete this item?")) return;
   try {
     if (kind === "stat") await eventStatsApi.remove(id);
     else if (kind === "focus") await focusAreasApi.remove(id);
-    else await partnersApi.remove(id);
+    else if (kind === "partner") await partnersApi.remove(id);
+    else if (kind === "village") await villagesApi.remove(id);
+    else if (kind === "speaker") await speakersApi.remove(id);
+    else if (kind === "session") await sessionsApi.remove(id);
+    else if (kind === "booth") await boothApplicationsApi.remove(id);
+    else if (kind === "registration") await registrationsApi.remove(id);
     msg.value = "Deleted";
     await loadDetail(selected.value.year);
   } catch (e: unknown) {
@@ -731,6 +853,11 @@ onMounted(load);
         </div>
 
         <div v-else-if="activeTab === 'villages'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('village')">
+              <VaIcon name="add" size="18px" /> Add Village
+            </button>
+          </div>
           <VaDataTable
             :items="selected?.villages || []"
             :columns="[
@@ -739,12 +866,30 @@ onMounted(load);
               { key: 'booths_count', label: 'Booths' },
               { key: 'demos_count', label: 'Demos' },
               { key: 'order', label: 'Order' },
+              { key: 'actions', label: '' },
             ]"
             hoverable
-          />
+          >
+            <template #cell(actions)="{ rowData }">
+              <button class="row-action" @click="openSub('village', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('village', rowData.slug)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
         </div>
 
         <div v-else-if="activeTab === 'speakers'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('speaker')">
+              <VaIcon name="add" size="18px" /> Add Speaker
+            </button>
+          </div>
           <VaDataTable
             :items="selected?.speakers || []"
             :columns="[
@@ -753,12 +898,30 @@ onMounted(load);
               { key: 'org', label: 'Org' },
               { key: 'is_confirmed', label: 'Confirmed' },
               { key: 'order', label: 'Order' },
+              { key: 'actions', label: '' },
             ]"
             hoverable
-          />
+          >
+            <template #cell(actions)="{ rowData }">
+              <button class="row-action" @click="openSub('speaker', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('speaker', rowData.id)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
         </div>
 
         <div v-else-if="activeTab === 'sessions'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('session')">
+              <VaIcon name="add" size="18px" /> Add Session
+            </button>
+          </div>
           <VaDataTable
             :items="selected?.sessions || []"
             :columns="[
@@ -769,11 +932,23 @@ onMounted(load);
               { key: 'location', label: 'Location' },
               { key: 'speaker', label: 'Speaker' },
               { key: 'order', label: 'Order' },
+              { key: 'actions', label: '' },
             ]"
             hoverable
           >
             <template #cell(speaker)="{ rowData }">
               {{ rowData.speaker ? rowData.speaker.name : "-" }}
+            </template>
+            <template #cell(actions)="{ rowData }">
+              <button class="row-action" @click="openSub('session', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('session', rowData.id)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
             </template>
           </VaDataTable>
         </div>
@@ -787,9 +962,22 @@ onMounted(load);
               { key: 'booth_package', label: 'Package' },
               { key: 'status', label: 'Status' },
               { key: 'assigned_booth_no', label: 'Booth No' },
+              { key: 'actions', label: '' },
             ]"
             hoverable
-          />
+          >
+            <template #cell(actions)="{ rowData }">
+              <button class="row-action" @click="openSub('booth', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('booth', rowData.id)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
         </div>
 
         <div v-else-if="activeTab === 'registrations'" class="tab-body">
@@ -802,9 +990,25 @@ onMounted(load);
               { key: 'type', label: 'Type' },
               { key: 'status', label: 'Status' },
               { key: 'badge_code', label: 'Badge' },
+              { key: 'actions', label: '' },
             ]"
             hoverable
-          />
+          >
+            <template #cell(actions)="{ rowData }">
+              <button
+                class="row-action"
+                @click="openSub('registration', rowData)"
+              >
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('registration', rowData.id)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
         </div>
 
         <div v-else-if="activeTab === 'metrics'" class="tab-body">
@@ -902,6 +1106,164 @@ onMounted(load);
               <div class="form-field">
                 <label>Order</label
                 ><input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'village'">
+              <div class="form-field span-2">
+                <label>Name</label>
+                <input v-model="subForm.name" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Slug</label>
+                <input v-model="subForm.slug" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Hall</label>
+                <input v-model="subForm.hall" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Emoji</label>
+                <input v-model="subForm.emoji" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Theme Color</label>
+                <input v-model="subForm.theme_color" type="color" />
+              </div>
+              <div class="form-field span-2">
+                <label>Tagline</label>
+                <input v-model="subForm.tagline" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Description</label>
+                <textarea v-model="subForm.description" rows="3" />
+              </div>
+              <div class="form-field span-2">
+                <label>Hero Image URL</label>
+                <input v-model="subForm.hero_image" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Stats (JSON)</label>
+                <textarea v-model="subForm.stats" rows="3" />
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'speaker'">
+              <div class="form-field span-2">
+                <label>Name</label>
+                <input v-model="subForm.name" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Title</label>
+                <input v-model="subForm.title" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Org</label>
+                <input v-model="subForm.org" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Initials</label>
+                <input v-model="subForm.initials" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Color</label>
+                <input v-model="subForm.color" type="color" />
+              </div>
+              <div class="form-field">
+                <label>Accent Light</label>
+                <input v-model="subForm.accent_light" type="color" />
+              </div>
+              <div class="form-field span-2">
+                <label>Photo URL</label>
+                <input v-model="subForm.photo_url" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Bio</label>
+                <textarea v-model="subForm.bio" rows="3" />
+              </div>
+              <div class="form-field">
+                <label>Confirmed</label>
+                <input v-model="subForm.is_confirmed" type="checkbox" />
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'session'">
+              <div class="form-field">
+                <label>Day</label>
+                <input v-model.number="subForm.day_number" type="number" />
+              </div>
+              <div class="form-field">
+                <label>Start Time</label>
+                <input v-model="subForm.start_time" type="text" />
+              </div>
+              <div class="form-field">
+                <label>End Time</label>
+                <input v-model="subForm.end_time" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Title</label>
+                <input v-model="subForm.title" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Type</label>
+                <select v-model="subForm.type">
+                  <option value="KEYNOTE">KEYNOTE</option>
+                  <option value="PANEL">PANEL</option>
+                  <option value="WORKSHOP">WORKSHOP</option>
+                  <option value="BREAK">BREAK</option>
+                  <option value="NETWORKING">NETWORKING</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Speaker ID</label>
+                <input v-model="subForm.speaker_id" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Speaker Text</label>
+                <input v-model="subForm.speaker_text" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Location</label>
+                <input v-model="subForm.location" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'booth'">
+              <div class="form-field">
+                <label>Status</label>
+                <select v-model="subForm.status">
+                  <option value="PENDING_REVIEW">PENDING_REVIEW</option>
+                  <option value="APPROVED">APPROVED</option>
+                  <option value="REJECTED">REJECTED</option>
+                  <option value="ASSIGNED">ASSIGNED</option>
+                  <option value="WAITLIST">WAITLIST</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Assigned Booth No</label>
+                <input v-model="subForm.assigned_booth_no" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Admin Notes</label>
+                <textarea v-model="subForm.admin_notes" rows="3" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'registration'">
+              <div class="form-field">
+                <label>Status</label>
+                <select v-model="subForm.status">
+                  <option value="CONFIRMED">CONFIRMED</option>
+                  <option value="PENDING">PENDING</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
               </div>
             </template>
             <template v-else>

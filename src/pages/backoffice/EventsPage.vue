@@ -98,6 +98,14 @@ const tableRows = computed(() =>
   })),
 );
 
+const heroImagePreviews = computed(() =>
+  String(eventForm.value.hero_images || "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => resolveMediaUrl(s)),
+);
+
 function statusPills(e: ExpoEvent) {
   const pills = [];
   if (e.is_published) pills.push("published");
@@ -730,6 +738,14 @@ onMounted(load);
                 accept="image/*"
                 @change="onImageFile($event, 'event', 'hero_images')"
               />
+              <div v-if="heroImagePreviews.length" class="hero-previews">
+                <img
+                  v-for="(src, i) in heroImagePreviews"
+                  :key="i"
+                  :src="src"
+                  class="form-thumb"
+                />
+              </div>
               <textarea v-model="eventForm.hero_images" rows="3" />
             </div>
             <div class="form-field span-2">
@@ -1184,6 +1200,11 @@ onMounted(load);
               <div class="form-field span-2">
                 <label>Image</label
                 ><input v-model="subForm.image" type="text" />
+                <img
+                  v-if="subForm.image"
+                  :src="resolveMediaUrl(subForm.image)"
+                  class="form-thumb"
+                />
                 <input
                   type="file"
                   accept="image/*"
@@ -1227,6 +1248,11 @@ onMounted(load);
               <div class="form-field span-2">
                 <label>Hero Image URL</label>
                 <input v-model="subForm.hero_image" type="text" />
+                <img
+                  v-if="subForm.hero_image"
+                  :src="resolveMediaUrl(subForm.hero_image)"
+                  class="form-thumb"
+                />
                 <input
                   type="file"
                   accept="image/*"
@@ -1270,6 +1296,11 @@ onMounted(load);
               <div class="form-field span-2">
                 <label>Photo</label>
                 <input v-model="subForm.photo" type="text" />
+                <img
+                  v-if="subForm.photo"
+                  :src="resolveMediaUrl(subForm.photo)"
+                  class="form-thumb"
+                />
                 <input
                   type="file"
                   accept="image/*"
@@ -1369,6 +1400,11 @@ onMounted(load);
               </div>
               <div class="form-field span-2">
                 <label>Logo</label><input v-model="subForm.logo" type="text" />
+                <img
+                  v-if="subForm.logo"
+                  :src="resolveMediaUrl(subForm.logo)"
+                  class="form-thumb"
+                />
                 <input
                   type="file"
                   accept="image/*"
@@ -1418,9 +1454,6 @@ onMounted(load);
 </template>
 
 <style scoped>
-.events-page {
-  /* outer spacing is handled by BackofficeLayout .bo-content */
-}
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -1777,11 +1810,18 @@ onMounted(load);
   gap: 0.5rem;
   margin-top: 1rem;
 }
+.hero-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}
+.form-thumb,
 .hero-thumb {
-  width: 120px;
-  height: 80px;
+  width: 80px;
+  height: 52px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid #e6ebf2;
 }
 .row-img {

@@ -127,6 +127,36 @@ function fromLocal(v: string) {
   return new Date(v).toISOString();
 }
 
+function toBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function onImageFile(e: Event, target: "event" | "sub", field: string) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    const b64 = await toBase64(file);
+    if (target === "event") {
+      if (field === "hero_images") {
+        const current = String(eventForm.value[field] || "").trim();
+        eventForm.value[field] = current ? current + "\n" + b64 : b64;
+      } else {
+        eventForm.value[field] = b64;
+      }
+    } else {
+      subForm.value[field] = b64;
+    }
+  } catch {
+    error.value = "Failed to read image";
+  }
+}
+
 async function load() {
   loading.value = true;
   error.value = "";
@@ -686,8 +716,13 @@ onMounted(load);
               ><input v-model="eventForm.venue_lng" type="number" step="any" />
             </div>
             <div class="form-field span-2">
-              <label>Hero Images (one per line)</label
-              ><textarea v-model="eventForm.hero_images" rows="3" />
+              <label>Hero Images (one per line)</label>
+              <input
+                type="file"
+                accept="image/*"
+                @change="onImageFile($event, 'event', 'hero_images')"
+              />
+              <textarea v-model="eventForm.hero_images" rows="3" />
             </div>
             <div class="form-field span-2">
               <label class="check-label"
@@ -1102,6 +1137,11 @@ onMounted(load);
               <div class="form-field span-2">
                 <label>Image URL</label
                 ><input v-model="subForm.image_url" type="text" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="onImageFile($event, 'sub', 'image_url')"
+                />
               </div>
               <div class="form-field">
                 <label>Order</label
@@ -1140,6 +1180,11 @@ onMounted(load);
               <div class="form-field span-2">
                 <label>Hero Image URL</label>
                 <input v-model="subForm.hero_image" type="text" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="onImageFile($event, 'sub', 'hero_image')"
+                />
               </div>
               <div class="form-field span-2">
                 <label>Stats (JSON)</label>
@@ -1178,6 +1223,11 @@ onMounted(load);
               <div class="form-field span-2">
                 <label>Photo URL</label>
                 <input v-model="subForm.photo_url" type="text" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="onImageFile($event, 'sub', 'photo_url')"
+                />
               </div>
               <div class="form-field span-2">
                 <label>Bio</label>
@@ -1273,6 +1323,11 @@ onMounted(load);
               <div class="form-field span-2">
                 <label>Logo URL</label
                 ><input v-model="subForm.logo_url" type="text" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="onImageFile($event, 'sub', 'logo_url')"
+                />
               </div>
               <div class="form-field">
                 <label>Tier</label>

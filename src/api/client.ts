@@ -211,39 +211,4 @@ export const donationConfirmationApi = {
   get: (id: number) => api(`/donation-confirmations/${id}/`),
 };
 
-export interface EventStats {
-  total: number;
-  published: number;
-  draft: number;
-  cancelled: number;
-  upcoming: number;
-}
-
-export interface Event {
-  id: number;
-  title: string;
-  slug: string;
-  description: string;
-  location: string;
-  start_date: string;
-  end_date: string | null;
-  status: "draft" | "published" | "cancelled";
-  is_featured: boolean;
-  cover_image_url: string;
-  max_attendees: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export const eventsApi = {
-  list: (params = "") => api<Event[]>(`/events/${params ? `?${params}` : ""}`),
-  stats: () => api<EventStats>("/events/statistics/"),
-  get: (id: number) => api<Event>(`/events/${id}/`),
-  create: (body: Record<string, unknown>) =>
-    api<Event>("/events/", { method: "POST", body }),
-  update: (id: number, body: Record<string, unknown>) =>
-    api<Event>(`/events/${id}/`, { method: "PATCH", body }),
-  remove: (id: number) => api(`/events/${id}/`, { method: "DELETE" }),
-};
-
 export { API_BASE };

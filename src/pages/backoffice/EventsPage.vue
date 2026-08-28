@@ -1419,16 +1419,14 @@ onMounted(load);
 
 <style scoped>
 .events-page {
-  padding: 1.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  /* outer spacing is handled by BackofficeLayout .bo-content */
 }
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.2rem;
 }
 .page-header h1 {
   margin: 0;

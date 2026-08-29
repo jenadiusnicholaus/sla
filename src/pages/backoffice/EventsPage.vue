@@ -180,38 +180,6 @@ async function extractFile(item: any): Promise<string | null> {
   return null;
 }
 
-async function onFileUpload(file: any, target: "event" | "sub", field: string) {
-  if (!file) return;
-  let raw: any = null;
-  if (file instanceof File || file instanceof Blob) {
-    raw = file;
-  } else if (
-    file.image?.raw instanceof File ||
-    file.image?.raw instanceof Blob
-  ) {
-    raw = file.image.raw;
-  } else if (file.image instanceof File || file.image instanceof Blob) {
-    raw = file.image;
-  } else if (file.raw instanceof File || file.raw instanceof Blob) {
-    raw = file.raw;
-  } else if (file.url && /^data:/.test(file.url)) {
-    assignBase64(file.url, target, field);
-    return;
-  } else if (typeof file.arrayBuffer === "function") {
-    raw = file;
-  } else if (Array.isArray(file) && file.length > 0) {
-    return onFileUpload(file[file.length - 1], target, field);
-  }
-
-  if (!raw) return;
-  try {
-    const b64 = await toBase64(raw);
-    assignBase64(b64, target, field);
-  } catch {
-    error.value = "Failed to read image";
-  }
-}
-
 watch(
   uploadFiles,
   async (val) => {
@@ -842,7 +810,6 @@ onMounted(load);
                 file-types="image/*"
                 upload-button-text="Add hero image"
                 drop-zone-text="Drop image here or click to add"
-                @file-added="onFileUpload($event, 'event', 'hero_images')"
               />
               <div v-if="heroImagePreviews.length" class="hero-previews">
                 <div
@@ -1323,7 +1290,6 @@ onMounted(load);
                   file-types="image/*"
                   upload-button-text="Upload image"
                   drop-zone-text="Drop image here or click to upload"
-                  @file-added="onFileUpload($event, 'sub', 'image')"
                 />
               </div>
               <div class="form-field">
@@ -1373,7 +1339,6 @@ onMounted(load);
                   file-types="image/*"
                   upload-button-text="Upload hero image"
                   drop-zone-text="Drop image here or click to upload"
-                  @file-added="onFileUpload($event, 'sub', 'hero_image')"
                 />
               </div>
               <div class="form-field span-2">
@@ -1423,7 +1388,6 @@ onMounted(load);
                   file-types="image/*"
                   upload-button-text="Upload photo"
                   drop-zone-text="Drop photo here or click to upload"
-                  @file-added="onFileUpload($event, 'sub', 'photo')"
                 />
               </div>
               <div class="form-field span-2">
@@ -1530,7 +1494,6 @@ onMounted(load);
                   file-types="image/*"
                   upload-button-text="Upload logo"
                   drop-zone-text="Drop logo here or click to upload"
-                  @file-added="onFileUpload($event, 'sub', 'logo')"
                 />
               </div>
               <div class="form-field">

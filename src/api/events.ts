@@ -272,7 +272,7 @@ function buildListQuery(
 }
 
 export const expoEventsApi = {
-  list: (params?: Record<string, string | number | undefined>) =>
+  list: (params?: Record<string, string | number | boolean | undefined>) =>
     api<Paginated<ExpoEvent>>(`/admin/expo-events/${buildListQuery(params)}`),
   get: (year: number) => api<ExpoEvent>(`/admin/expo-events/${year}/`),
   create: (body: Record<string, unknown>) =>

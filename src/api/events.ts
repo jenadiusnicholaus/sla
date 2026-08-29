@@ -261,7 +261,7 @@ export interface DashboardMetrics {
 }
 
 function buildListQuery(
-  params?: Record<string, string | number | boolean | undefined>,
+  params?: Record<string, string | number | boolean | undefined> | object,
 ) {
   if (!params) return "";
   const q = new URLSearchParams();

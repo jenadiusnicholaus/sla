@@ -187,6 +187,7 @@ export interface Speaker {
   bio: string;
   order: number;
   is_confirmed: boolean;
+  is_approved: boolean;
 }
 
 export interface Session {

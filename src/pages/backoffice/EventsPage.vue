@@ -548,6 +548,7 @@ function openSub(kind: typeof subKind.value, item?: unknown) {
       bio: "",
       order: 1,
       is_confirmed: false,
+      is_approved: false,
     };
     if (item) {
       const s = item as Speaker;
@@ -1144,6 +1145,7 @@ onMounted(load);
               { key: 'title', label: 'Title' },
               { key: 'org', label: 'Org' },
               { key: 'is_confirmed', label: 'Confirmed' },
+              { key: 'is_approved', label: 'Approved' },
               { key: 'order', label: 'Order' },
               { key: 'actions', label: '' },
             ]"
@@ -1474,6 +1476,10 @@ onMounted(load);
               <div class="form-field">
                 <label>Confirmed</label>
                 <input v-model="subForm.is_confirmed" type="checkbox" />
+              </div>
+              <div class="form-field">
+                <label>Approved</label>
+                <input v-model="subForm.is_approved" type="checkbox" />
               </div>
               <div class="form-field">
                 <label>Order</label>

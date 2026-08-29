@@ -766,7 +766,6 @@ onMounted(load);
                   class="form-thumb"
                 />
               </div>
-              <textarea v-model="eventForm.hero_images" rows="3" />
             </div>
             <div class="form-field span-2">
               <label class="check-label"
@@ -1218,8 +1217,7 @@ onMounted(load);
                 ><input v-model="subForm.badge_color" type="color" />
               </div>
               <div class="form-field span-2">
-                <label>Image</label
-                ><input v-model="subForm.image" type="text" />
+                <label>Image</label>
                 <img
                   v-if="subForm.image"
                   :src="resolveMediaUrl(subForm.image)"
@@ -1269,8 +1267,7 @@ onMounted(load);
                 <textarea v-model="subForm.description" rows="3" />
               </div>
               <div class="form-field span-2">
-                <label>Hero Image URL</label>
-                <input v-model="subForm.hero_image" type="text" />
+                <label>Hero Image</label>
                 <img
                   v-if="subForm.hero_image"
                   :src="resolveMediaUrl(subForm.hero_image)"
@@ -1321,7 +1318,6 @@ onMounted(load);
               </div>
               <div class="form-field span-2">
                 <label>Photo</label>
-                <input v-model="subForm.photo" type="text" />
                 <img
                   v-if="subForm.photo"
                   :src="resolveMediaUrl(subForm.photo)"
@@ -1428,7 +1424,7 @@ onMounted(load);
                 <label>Name</label><input v-model="subForm.name" type="text" />
               </div>
               <div class="form-field span-2">
-                <label>Logo</label><input v-model="subForm.logo" type="text" />
+                <label>Logo</label>
                 <img
                   v-if="subForm.logo"
                   :src="resolveMediaUrl(subForm.logo)"

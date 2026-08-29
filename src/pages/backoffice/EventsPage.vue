@@ -6,6 +6,7 @@ import {
   focusAreasApi,
   partnersApi,
   villagesApi,
+  villageHighlightsApi,
   speakersApi,
   sessionsApi,
   boothApplicationsApi,
@@ -17,6 +18,7 @@ import type {
   FocusArea,
   Partner,
   Village,
+  VillageHighlight,
   Speaker,
   Session,
   BoothApplication,
@@ -55,6 +57,7 @@ const events = ref<ExpoEvent[]>([]);
 const view = ref<"list" | "detail">("list");
 const eventModalOpen = ref(false);
 const subModalOpen = ref(false);
+const removedHighlightIds = ref<string[]>([]);
 const activeTab = ref<
   | "overview"
   | "stats"
@@ -264,6 +267,25 @@ async function removeHeroImageViaApi(year: number, heroId: string) {
     error.value =
       e instanceof Error ? e.message : "Failed to remove hero image";
   }
+}
+
+function addHighlight() {
+  if (!Array.isArray(subForm.value.highlights)) subForm.value.highlights = [];
+  subForm.value.highlights.push({
+    id: undefined,
+    village: subEditingId.value || "",
+    icon: "",
+    title: "",
+    description: "",
+    order: subForm.value.highlights.length + 1,
+  });
+}
+
+function removeHighlight(index: any) {
+  if (!Array.isArray(subForm.value.highlights)) return;
+  const h = subForm.value.highlights[index];
+  if (h?.id) removedHighlightIds.value.push(h.id);
+  subForm.value.highlights.splice(index, 1);
 }
 
 async function load() {
@@ -537,15 +559,25 @@ function openSub(kind: typeof subKind.value, item?: unknown) {
       theme_color: "#2563EB",
       tagline: "",
       description: "",
+      why_visit: "",
       hero_image: "",
       stats: "[]",
+      highlights: [] as any[],
       order: 1,
     };
     if (item) {
       const v = item as Village;
       subEditingId.value = v.slug;
-      setDefaults(base, { ...v, stats: JSON.stringify(v.stats || []) });
-    } else setDefaults(base, {});
+      removedHighlightIds.value = [];
+      setDefaults(base, {
+        ...v,
+        stats: JSON.stringify(v.stats || []),
+        highlights: (v.highlights || []).map((h) => ({ ...h })),
+      });
+    } else {
+      removedHighlightIds.value = [];
+      setDefaults(base, {});
+    }
   } else if (kind === "speaker") {
     const base = {
       event: eventId,
@@ -635,9 +667,35 @@ async function saveSub() {
       else await partnersApi.create(body);
     } else if (subKind.value === "village") {
       if (typeof body.stats === "string") body.stats = JSON.parse(body.stats);
-      if (subEditingId.value)
-        await villagesApi.update(subEditingId.value, body);
-      else await villagesApi.create(body);
+      const highlights = (body.highlights as VillageHighlight[]) || [];
+      delete body.highlights;
+      let savedVillage: Village | null = null;
+      if (subEditingId.value) {
+        savedVillage = (await villagesApi.update(
+          subEditingId.value,
+          body,
+        )) as Village;
+      } else {
+        savedVillage = (await villagesApi.create(body)) as Village;
+      }
+      const villageId = savedVillage?.id || subEditingId.value || "";
+      for (const h of highlights) {
+        const payload = {
+          village: villageId,
+          icon: h.icon,
+          title: h.title,
+          description: h.description,
+          order: h.order,
+        };
+        if (h.id) {
+          await villageHighlightsApi.update(h.id, payload);
+        } else {
+          await villageHighlightsApi.create(payload);
+        }
+      }
+      for (const id of removedHighlightIds.value) {
+        await villageHighlightsApi.remove(id);
+      }
     } else if (subKind.value === "speaker") {
       if (subEditingId.value)
         await speakersApi.update(subEditingId.value, body);
@@ -1425,6 +1483,10 @@ onMounted(load);
                 <textarea v-model="subForm.description" rows="3" />
               </div>
               <div class="form-field span-2">
+                <label>Why Visit</label>
+                <textarea v-model="subForm.why_visit" rows="3" />
+              </div>
+              <div class="form-field span-2">
                 <label>Hero Image</label>
                 <img
                   v-if="subForm.hero_image"
@@ -1442,6 +1504,50 @@ onMounted(load);
               <div class="form-field span-2">
                 <label>Stats (JSON)</label>
                 <textarea v-model="subForm.stats" rows="3" />
+              </div>
+              <div class="form-field span-2">
+                <label>Highlights</label>
+                <div
+                  v-for="(h, idx) in subForm.highlights"
+                  :key="h.id || idx"
+                  class="highlight-row"
+                >
+                  <input
+                    v-model="h.icon"
+                    type="text"
+                    placeholder="Icon"
+                    class="hl-icon"
+                  />
+                  <input
+                    v-model="h.title"
+                    type="text"
+                    placeholder="Title"
+                    class="hl-title"
+                  />
+                  <input
+                    v-model="h.description"
+                    type="text"
+                    placeholder="Description"
+                    class="hl-desc"
+                  />
+                  <input
+                    v-model.number="h.order"
+                    type="number"
+                    placeholder="#"
+                    class="hl-order"
+                  />
+                  <button
+                    type="button"
+                    class="row-action"
+                    title="Remove"
+                    @click="removeHighlight(idx)"
+                  >
+                    <VaIcon name="delete" size="16px" />
+                  </button>
+                </div>
+                <button type="button" class="btn-ghost" @click="addHighlight">
+                  + Add Highlight
+                </button>
               </div>
               <div class="form-field">
                 <label>Order</label>
@@ -1992,6 +2098,23 @@ onMounted(load);
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1rem;
+}
+.highlight-row {
+  display: grid;
+  grid-template-columns: 90px 1.2fr 2fr 60px 30px;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+.highlight-row input {
+  padding: 0.4rem;
+  border: 1px solid #d0d9e6;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.highlight-row .row-action {
+  width: 28px;
+  height: 28px;
 }
 .focus-card {
   border: 1px solid #e6ebf2;

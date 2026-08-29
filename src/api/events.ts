@@ -82,6 +82,7 @@ export interface Village {
   theme_color: string;
   tagline: string;
   description: string;
+  why_visit: string;
   hero_image: string;
   stats: { label: string; value: string }[];
   booths_count?: number;
@@ -90,6 +91,16 @@ export interface Village {
   booths?: VillageBooth[];
   schedule?: VillageSchedule[];
   gallery?: VillageGallery[];
+  highlights?: VillageHighlight[];
+}
+
+export interface VillageHighlight {
+  id: string;
+  village: string;
+  icon: string;
+  title: string;
+  description: string;
+  order: number;
 }
 
 export interface VillageBooth {
@@ -417,6 +428,27 @@ export const villageGalleriesApi = {
     }),
   remove: (id: string) =>
     api(`/admin/village-galleries/${id}/`, { method: "DELETE" }),
+};
+
+export const villageHighlightsApi = {
+  list: (params?: { village?: string }) =>
+    api<Paginated<VillageHighlight>>(
+      `/admin/village-highlights/${buildListQuery(params)}`,
+    ),
+  get: (id: string) =>
+    api<VillageHighlight>(`/admin/village-highlights/${id}/`),
+  create: (body: Record<string, unknown>) =>
+    api<VillageHighlight>("/admin/village-highlights/", {
+      method: "POST",
+      body,
+    }),
+  update: (id: string, body: Record<string, unknown>) =>
+    api<VillageHighlight>(`/admin/village-highlights/${id}/`, {
+      method: "PATCH",
+      body,
+    }),
+  remove: (id: string) =>
+    api(`/admin/village-highlights/${id}/`, { method: "DELETE" }),
 };
 
 export const boothApplicationsApi = {

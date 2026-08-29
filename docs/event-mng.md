@@ -1,4 +1,3 @@
-      "title": "Minister of ICT",
 # Events Admin API Guide
 
 All admin endpoints require `Authorization: Bearer <JWT>` header.  
@@ -27,6 +26,7 @@ Image and file fields use Django `ImageField`/`FileField` — responses return *
 13. [Media Assets](#13-media-assets) — upload, list, update, delete, media library browser
 14. [Dashboard Metrics](#14-dashboard-metrics) — aggregated stats
 15. [Badge Export](#15-badge-export-csv) — CSV download
+16. [Village Highlights](#16-village-highlights) — CRUD
 
 ---
 
@@ -653,6 +653,7 @@ Accepts one or multiple by `id`(s) or `url`/`path`.
   "theme_color": "#2563EB",
   "tagline": "Transforming Public Services",
   "description": "...",
+  "why_visit": "...",
   "hero_image": "data:image/png;base64,iVBOR...",
   "stats": [{ "label": "Agencies", "value": "14+" }],
   "order": 1
@@ -661,7 +662,7 @@ Accepts one or multiple by `id`(s) or `url`/`path`.
 
 > **Note:** `hero_image` is an `ImageField` — accepts base64 data URI on create/update, returns absolute file URL in responses.
 
-### 5.3 Retrieve Village (with nested booths, schedule, gallery)
+### 5.3 Retrieve Village (with nested booths, schedule, gallery, highlights)
 
 `GET /api/admin/villages/{slug}/`
 
@@ -676,6 +677,7 @@ Accepts one or multiple by `id`(s) or `url`/`path`.
   "theme_color": "#2563EB",
   "tagline": "...",
   "description": "...",
+  "why_visit": "...",
   "hero_image": "http://localhost:8089/media/events/villages/govtech.png",
   "stats": [{ "label": "Agencies", "value": "14+" }],
   "booths": [
@@ -714,6 +716,16 @@ Accepts one or multiple by `id`(s) or `url`/`path`.
       "title": "Citizen Portal Showcase",
       "caption": "One-stop government services",
       "edition_year": 2026,
+      "order": 1
+    }
+  ],
+  "highlights": [
+    {
+      "id": "uuid",
+      "village": "uuid",
+      "icon": "smart_display",
+      "title": "Live Production Demos",
+      "description": "Experience hands-on workflows running on real infrastructure testbeds.",
       "order": 1
     }
   ],
@@ -984,4 +996,501 @@ Accepts one or multiple by `id`(s) or `url`/`path`.
 ```json
 {
   "success": true,
-  "data": { "id": "uuid", "status": "APPROVED", "assigned_booth_no": "A-04", 
+  "data": { "id": "uuid", "status": "APPROVED", "assigned_booth_no": "A-04", ... }
+}
+```
+
+### 9.4 Delete Application
+
+`DELETE /api/admin/booth-applications/{id}/` — `204 No Content`
+
+---
+
+## 10. Registrations
+
+### 10.1 List Registrations
+
+`GET /api/admin/registrations/?event={uuid}&type=GUEST&status=CONFIRMED`
+
+**Filters:** `?event={uuid}`, `?type=GUEST|SPEAKER|VOLUNTEER`, `?status=CONFIRMED|PENDING_REVIEW|APPROVED|WAITLIST|REJECTED`  
+**Search:** `?search=john` (searches `first_name`, `last_name`, `email`, `reference_no`)
+
+**List response `200`** (paginated)
+
+```json
+{
+  "count": 8420,
+  "next": "http://...&page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": "uuid",
+      "reference_no": "TZ-DPI-GUE-BB20C79C",
+      "event": "uuid",
+      "type": "GUEST",
+      "first_name": "John",
+      "last_name": "Doe",
+      "email": "john@example.com",
+      "phone": "+255123456789",
+      "country": "Tanzania",
+      "organization": "Test Org",
+      "extra_data": { "guest_category": "", "dietary_reqs": "" },
+      "status": "CONFIRMED",
+      "badge_code": "QR-TZ-DPI-GUE-BB20C79C",
+      "agree_terms": true,
+      "created_at": "...",
+      "updated_at": "..."
+    }
+  ]
+}
+```
+
+### 10.2 Retrieve / Update / Delete
+
+| Method   | Path                             |
+| -------- | -------------------------------- |
+| `GET`    | `/api/admin/registrations/{id}/` |
+| `PATCH`  | `/api/admin/registrations/{id}/` |
+| `DELETE` | `/api/admin/registrations/{id}/` |
+
+**Retrieve response `200`**
+
+```json
+{
+  "id": "uuid",
+  "reference_no": "TZ-DPI-GUE-BB20C79C",
+  "event": "uuid",
+  "type": "GUEST",
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john@example.com",
+  "phone": "+255123456789",
+  "country": "Tanzania",
+  "organization": "Test Org",
+  "extra_data": { "guest_category": "", "dietary_reqs": "" },
+  "status": "CONFIRMED",
+  "badge_code": "QR-TZ-DPI-GUE-BB20C79C",
+  "agree_terms": true,
+  "created_at": "...",
+  "updated_at": "..."
+}
+```
+
+**Registration status values:** `CONFIRMED`, `PENDING_REVIEW`, `APPROVED`, `WAITLIST`, `REJECTED`  
+**Registration type values:** `GUEST`, `SPEAKER`, `VOLUNTEER`
+
+### 10.3 Approve Registration
+
+`POST /api/admin/registrations/{id}/approve/`
+
+Approves the registration. For `SPEAKER` type, it also creates a new `Speaker` record (confirmed) and returns it.
+
+**Response `200`**
+
+```json
+{
+  "message": "Registration approved.",
+  "registration": {
+    "id": "uuid",
+    "reference_no": "TZ-DPI-SPE-041C0A9D",
+    "type": "SPEAKER",
+    "first_name": "Miriam",
+    "last_name": "Griffin",
+    "status": "APPROVED",
+    ...
+  },
+  "speaker": {
+    "id": "uuid",
+    "event": "uuid",
+    "name": "Miriam Griffin",
+    "title": "Quis esse atque quae",
+    "org": "Merritt Green LLC",
+    "initials": "MG",
+    "color": "#2563EB",
+    "accent_light": "#DBEAFE",
+    "photo": null,
+    "bio": "Incididunt voluptate",
+    "order": 6,
+    "is_confirmed": true,
+    "is_approved": true
+  }
+}
+```
+
+### 10.4 Reject Registration
+
+`POST /api/admin/registrations/{id}/reject/`
+
+**Response `200`**
+
+```json
+{
+  "message": "Registration rejected.",
+  "registration": {
+    "id": "uuid",
+    "status": "REJECTED",
+    ...
+  }
+}
+```
+
+---
+
+## 11. Speakers
+
+### 11.1 List / Create / Update / Delete
+
+| Method   | Path                                                  |
+| -------- | ----------------------------------------------------- |
+| `GET`    | `/api/admin/speakers/?event={uuid}&is_confirmed=true` |
+| `POST`   | `/api/admin/speakers/`                                |
+| `PATCH`  | `/api/admin/speakers/{id}/`                           |
+| `DELETE` | `/api/admin/speakers/{id}/`                           |
+
+**Filters:** `?event={uuid}`, `?is_confirmed=true|false`
+
+**List response `200`** (paginated)
+
+```json
+{
+  "count": 48,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "uuid",
+      "event": "uuid",
+      "name": "Dr. Fatma Hassan",
+      "title": "Minister of ICT",
+      "org": "Government of Tanzania",
+      "initials": "FH",
+      "color": "#1E40AF",
+      "accent_light": "#DBEAFE",
+      "photo": "http://localhost:8089/media/events/speakers/FH.png",
+      "bio": "Leading national telecommunication transformation.",
+      "order": 1,
+      "is_confirmed": true,
+      "is_approved": true
+    }
+  ]
+}
+```
+
+**Create body**
+
+```json
+{
+  "event": "uuid",
+  "name": "Dr. Fatma Hassan",
+  "title": "Minister of ICT",
+  "org": "Government of Tanzania",
+  "initials": "FH",
+  "color": "#1E40AF",
+  "accent_light": "#DBEAFE",
+  "photo": "data:image/png;base64,iVBOR...",
+  "bio": "Leading national telecommunication transformation.",
+  "order": 1,
+  "is_confirmed": true
+}
+```
+
+> **Note:** `photo` is an `ImageField` — accepts base64 data URI on create/update, returns absolute file URL in responses.
+
+### 11.2 Approve Speaker
+
+`POST /api/admin/speakers/{id}/approve/`
+
+Sets `is_confirmed`/`is_approved` to `true` for an existing speaker.
+
+**Response `200`** — the updated `Speaker` object.
+
+### 11.3 Unconfirm Speaker
+
+`POST /api/admin/speakers/{id}/unconfirm/`
+
+Sets `is_confirmed`/`is_approved` to `false` for an existing speaker.
+
+**Response `200`** — the updated `Speaker` object.
+
+---
+
+## 12. Sessions
+
+### 12.1 List / Create / Update / Delete
+
+| Method   | Path                                                          |
+| -------- | ------------------------------------------------------------- |
+| `GET`    | `/api/admin/sessions/?event={uuid}&day_number=1&type=KEYNOTE` |
+| `POST`   | `/api/admin/sessions/`                                        |
+| `PATCH`  | `/api/admin/sessions/{id}/`                                   |
+| `DELETE` | `/api/admin/sessions/{id}/`                                   |
+
+**Filters:** `?event={uuid}`, `?day_number=1`, `?type=KEYNOTE|PANEL|WORKSHOP|BREAK|EXHIBITION`
+
+**List response `200`** (paginated)
+
+```json
+{
+  "count": 32,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "uuid",
+      "event": "uuid",
+      "day_number": 1,
+      "start_time": "09:00",
+      "end_time": "10:00",
+      "title": "Opening Keynote",
+      "type": "KEYNOTE",
+      "speaker": {
+        "id": "uuid",
+        "event": "uuid",
+        "name": "Dr. Fatma Hassan",
+        "title": "Minister of ICT",
+        "org": "Government of Tanzania",
+        "initials": "FH",
+        "color": "#1E40AF",
+        "accent_light": "#DBEAFE",
+        "photo": "http://localhost:8089/media/events/speakers/FH.png",
+        "bio": "...",
+        "order": 1,
+        "is_confirmed": true
+      },
+      "speaker_id": "uuid",
+      "speaker_text": "",
+      "location": "Main Hall",
+      "order": 1
+    }
+  ]
+}
+```
+
+**Create body**
+
+```json
+{
+  "event": "uuid",
+  "day_number": 1,
+  "start_time": "09:00",
+  "end_time": "10:00",
+  "title": "Opening Keynote",
+  "type": "KEYNOTE",
+  "speaker_id": "uuid",
+  "speaker_text": "",
+  "location": "Main Hall",
+  "order": 1
+}
+```
+
+**Response** includes nested `speaker` object (read-only) and writable `speaker_id`.
+
+**Session type values:** `KEYNOTE`, `PANEL`, `WORKSHOP`, `BREAK`, `EXHIBITION`
+
+---
+
+## 13. Media Assets
+
+### 13.1 Upload File (Base64 JSON)
+
+`POST /api/admin/media-assets/`
+
+**Content-Type:** `application/json`
+
+Supports **base64-encoded** file uploads via JSON. The `file_base64` field accepts data URIs (`data:image/...;base64,...`). The file is saved to the filesystem via Django `FileField` and the response returns the file URL.
+
+| Field         | Type   | Description                                                  |
+| ------------- | ------ | ------------------------------------------------------------ |
+| `file_base64` | String | Base64 data URI: `data:image/png;base64,iVBOR...`            |
+| `folder`      | String | `heroes`, `speakers`, `villages`, `gallery`, `logos`, `docs` |
+| `altText`     | String | Accessibility description                                    |
+| `eventId`     | UUID   | Optional, links to event                                     |
+
+**Request example**
+
+```json
+{
+  "file_base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...",
+  "folder": "gallery",
+  "altText": "GovTech Village keynote stage",
+  "eventId": "3df2e41b-1cb8-4d1d-90c2-8042e72abea7"
+}
+```
+
+**Response `201`** (includes both snake_case and camelCase fields)
+
+```json
+{
+  "id": "uuid",
+  "event": "uuid",
+  "eventId": "uuid",
+  "original_name": "upload_a1b2c3d4.png",
+  "originalName": "upload_a1b2c3d4.png",
+  "file_name": "upload_a1b2c3d4.png",
+  "fileName": "upload_a1b2c3d4.png",
+  "mime_type": "image/png",
+  "mimeType": "image/png",
+  "size_bytes": 1420580,
+  "sizeBytes": 1420580,
+  "folder": "gallery",
+  "file": "http://localhost:8089/media/events/media/upload_a1b2c3d4.png",
+  "thumbnail": null,
+  "alt_text": "GovTech Village keynote stage",
+  "alt_text_read": "GovTech Village keynote stage",
+  "altText": "GovTech Village keynote stage",
+  "width": 1920,
+  "height": 1080,
+  "dimensions": { "width": 1920, "height": 1080 },
+  "created_at": "...",
+  "createdAt": "..."
+}
+```
+
+> **Note:** `file_base64` accepts base64 data URIs (`data:image/...;base64,...`). The `file` and `thumbnail` fields in the response are Django `FileField`/`ImageField` absolute URLs pointing to the filesystem. Image dimensions (`width`, `height`, `dimensions`) are automatically extracted on upload.
+
+### 13.2 Upload File (Multipart)
+
+`POST /api/admin/media-assets/`
+
+**Content-Type:** `multipart/form-data`
+
+Also supports traditional multipart file uploads. Use `file_base64` as the multipart file field name. Same other fields as above.
+
+### 13.3 List / Update / Delete
+
+| Method   | Path                                                   |
+| -------- | ------------------------------------------------------ |
+| `GET`    | `/api/admin/media-assets/?event={uuid}&folder=gallery` |
+| `PATCH`  | `/api/admin/media-assets/{id}/`                        |
+| `DELETE` | `/api/admin/media-assets/{id}/`                        |
+
+### 13.4 Media Library Browser
+
+`GET /api/admin/files/?folder=gallery&search=keynote&eventId={uuid}&page=1&limit=24`
+
+**Query params:** `folder`, `search`, `eventId`, `page`, `limit` (default 24)
+
+**Response `200`** (paginated, snake_case fields)
+
+```json
+{
+  "count": 148,
+  "next": "http://...&page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": "uuid",
+      "event": "uuid",
+      "original_name": "photo.jpg",
+      "file_name": "events/gallery/photo.jpg",
+      "mime_type": "image/jpeg",
+      "size_bytes": 1420580,
+      "folder": "gallery",
+      "file": "http://localhost:8089/media/events/gallery/photo.jpg",
+      "thumbnail": null,
+      "alt_text": "Caption",
+      "width": null,
+      "height": null,
+      "created_at": "..."
+    }
+  ]
+}
+```
+
+> **Note:** Query params use camelCase (`eventId`). Response fields `file` and `thumbnail` are Django `FileField`/`ImageField` absolute URLs.
+
+---
+
+## 14. Dashboard Metrics
+
+`GET /api/admin/events/{year}/metrics/`
+
+**Response `200`**
+
+```json
+{
+  "success": true,
+  "metrics": {
+    "totalRegistrations": 8420,
+    "breakdown": {
+      "guests": 7850,
+      "booths": 52,
+      "speakers": 48,
+      "volunteers": 470
+    },
+    "villageOccupancy": [
+      {
+        "slug": "govtech",
+        "name": "GovTech Village",
+        "allocatedBooths": 14,
+        "capacity": 16,
+        "occupancyRate": "87.5%"
+      }
+    ],
+    "pendingBoothApplications": 7
+  }
+}
+```
+
+---
+
+## 15. Badge Export (CSV)
+
+`GET /api/admin/events/{year}/export/badges/?type=all`
+
+**Query param:** `type` — `all`, `GUEST`, `SPEAKER`, `VOLUNTEER`
+
+**Response `200`** — `text/csv` attachment
+
+```
+RefNo,Name,Email,Organization,Category,BadgeCode,Status
+TZ-DPI-GUE-BB20C79C,John Doe,john@example.com,Test Org,GUEST,QR-TZ-DPI-GUE-BB20C79C,CONFIRMED
+```
+
+---
+
+## 16. Village Highlights
+
+### 16.1 List / Create / Update / Delete
+
+| Method   | Path                                            |
+| -------- | ----------------------------------------------- |
+| `GET`    | `/api/admin/village-highlights/?village={uuid}` |
+| `POST`   | `/api/admin/village-highlights/`                |
+| `GET`    | `/api/admin/village-highlights/{id}/`           |
+| `PATCH`  | `/api/admin/village-highlights/{id}/`           |
+| `DELETE` | `/api/admin/village-highlights/{id}/`           |
+
+**Filter:** `?village={uuid}`
+
+**List response `200`** (paginated)
+
+```json
+{
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "uuid",
+      "village": "uuid",
+      "icon": "smart_display",
+      "title": "Live Production Demos",
+      "description": "Experience hands-on workflows running on real infrastructure testbeds.",
+      "order": 1
+    }
+  ]
+}
+```
+
+**Create body**
+
+```json
+{
+  "village": "uuid",
+  "icon": "smart_display",
+  "title": "Live Production Demos",
+  "description": "Experience hands-on workflows running on real infrastructure testbeds.",
+  "order": 1
+}
+```

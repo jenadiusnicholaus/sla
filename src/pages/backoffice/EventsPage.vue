@@ -165,9 +165,20 @@ async function onImageFile(e: Event, target: "event" | "sub", field: string) {
       } else {
         eventForm.value[field] = b64;
       }
-    } else {
+    } else if (field !== "image") {
       subForm.value[field] = b64;
     }
+  } catch {
+    error.value = "Failed to read image";
+  }
+}
+
+async function onFocusAreaFile(file: any) {
+  if (!file) return;
+  const raw = file.image || file.raw || file;
+  if (!raw || !(raw instanceof File || raw instanceof Blob)) return;
+  try {
+    subForm.value.image = await toBase64(raw as File);
   } catch {
     error.value = "Failed to read image";
   }
@@ -1205,10 +1216,13 @@ onMounted(load);
                   :src="resolveMediaUrl(subForm.image)"
                   class="form-thumb"
                 />
-                <input
-                  type="file"
-                  accept="image/*"
-                  @change="onImageFile($event, 'sub', 'image')"
+                <VaFileUpload
+                  type="single"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload image"
+                  drop-zone-text="Drop image here or click to upload"
+                  @file-added="onFocusAreaFile"
                 />
               </div>
               <div class="form-field">

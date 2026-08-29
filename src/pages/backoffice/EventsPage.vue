@@ -24,6 +24,28 @@ import type {
   DashboardMetrics,
 } from "@/api/events";
 import { MEDIA_BASE } from "@/api/client";
+import { marked } from "marked";
+
+function renderMarkdown(md: string): string {
+  if (!md) return "";
+  return marked.parse(md, { async: false }) as string;
+}
+
+const showMdPreview = ref(false);
+
+function insertMd(prefix: string, suffix = "") {
+  const ta = document.querySelector<HTMLTextAreaElement>("#md-editor");
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const text = eventForm.value.description || "";
+  const sel = text.substring(start, end);
+  const newText =
+    text.substring(0, start) + prefix + sel + suffix + text.substring(end);
+  eventForm.value.description = newText;
+  ta.focus();
+  ta.setSelectionRange(start + prefix.length, end + prefix.length);
+}
 
 const loading = ref(false);
 const saving = ref(false);
@@ -98,7 +120,16 @@ const tableRows = computed(() =>
   })),
 );
 
-const heroImagePreviews = computed(() =>
+interface HeroPreview {
+  id?: string;
+  image: string;
+  order?: number;
+  isNew?: boolean;
+  isRemoved?: boolean;
+  url: string;
+}
+
+const heroImagePreviews = computed<HeroPreview[]>(() =>
   (eventForm.value.hero_images || [])
     .filter((h: any) => !h.isRemoved)
     .map((h: any) => ({
@@ -775,8 +806,51 @@ onMounted(load);
               ><input v-model="eventForm.tagline" type="text" />
             </div>
             <div class="form-field span-2">
-              <label>Description</label
-              ><textarea v-model="eventForm.description" rows="3" />
+              <label>Description (Markdown)</label>
+              <div class="md-toolbar">
+                <button type="button" @click.prevent="insertMd('## ')">
+                  H2
+                </button>
+                <button type="button" @click.prevent="insertMd('### ')">
+                  H3
+                </button>
+                <button type="button" @click.prevent="insertMd('**', '**')">
+                  Bold
+                </button>
+                <button type="button" @click.prevent="insertMd('*', '*')">
+                  Italic
+                </button>
+                <button type="button" @click.prevent="insertMd('- ')">
+                  List
+                </button>
+                <button type="button" @click.prevent="insertMd('1. ')">
+                  Num
+                </button>
+                <button type="button" @click.prevent="insertMd('> ')">
+                  Quote
+                </button>
+                <button type="button" @click.prevent="insertMd('[', '](url)')">
+                  Link
+                </button>
+                <button
+                  type="button"
+                  @click.prevent="showMdPreview = !showMdPreview"
+                >
+                  {{ showMdPreview ? "Edit" : "Preview" }}
+                </button>
+              </div>
+              <textarea
+                v-if="!showMdPreview"
+                id="md-editor"
+                v-model="eventForm.description"
+                rows="10"
+                class="md-editor"
+              />
+              <div
+                v-else
+                class="md-render md-preview"
+                v-html="renderMarkdown(eventForm.description || '')"
+              ></div>
             </div>
             <div class="form-field">
               <label>Start</label
@@ -888,7 +962,10 @@ onMounted(load);
             <dt>Tagline</dt>
             <dd>{{ selected?.tagline }}</dd>
             <dt>Description</dt>
-            <dd>{{ selected?.description }}</dd>
+            <dd
+              class="md-render"
+              v-html="renderMarkdown(selected?.description || '')"
+            ></dd>
             <dt>Dates</dt>
             <dd>
               {{ formatDate(selected?.start_date || "") }} —
@@ -1798,6 +1875,93 @@ onMounted(load);
 .detail-list dd {
   margin: 0;
   color: #0a1f44;
+}
+.md-render {
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+.md-render h1,
+.md-render h2,
+.md-render h3 {
+  margin: 0.8em 0 0.4em;
+  color: #0a1f44;
+}
+.md-render h2 {
+  font-size: 1.3rem;
+  border-bottom: 1px solid #e6ebf2;
+  padding-bottom: 0.3rem;
+}
+.md-render h3 {
+  font-size: 1.1rem;
+}
+.md-render ul,
+.md-render ol {
+  padding-left: 1.5rem;
+  margin: 0.4em 0;
+}
+.md-render li {
+  margin: 0.2em 0;
+}
+.md-render p {
+  margin: 0.5em 0;
+}
+.md-render a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.md-render code {
+  background: #f0f4f8;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.md-render blockquote {
+  border-left: 3px solid #cbd5e1;
+  padding-left: 1rem;
+  margin: 0.5em 0;
+  color: #64748b;
+}
+.md-render hr {
+  border: none;
+  border-top: 1px solid #e6ebf2;
+  margin: 1em 0;
+}
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+.md-toolbar button {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid #d0d9e6;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+}
+.md-toolbar button:hover {
+  background: #e2e8f0;
+}
+.md-editor {
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.875rem;
+  padding: 0.6rem;
+  border: 1px solid #d0d9e6;
+  border-radius: 6px;
+  resize: vertical;
+}
+.md-preview {
+  min-height: 200px;
+  padding: 0.8rem;
+  border: 1px solid #d0d9e6;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+.detail-list dd.md-render {
+  grid-column: 2;
 }
 .focus-grid {
   display: grid;

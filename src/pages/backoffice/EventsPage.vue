@@ -152,33 +152,22 @@ function toBase64(file: File): Promise<string> {
   });
 }
 
-async function onImageFile(e: Event, target: "event" | "sub", field: string) {
-  const input = e.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-  try {
-    const b64 = await toBase64(file);
-    if (target === "event") {
-      if (field === "hero_images") {
-        const current = String(eventForm.value[field] || "").trim();
-        eventForm.value[field] = current ? current + "\n" + b64 : b64;
-      } else {
-        eventForm.value[field] = b64;
-      }
-    } else if (field !== "image") {
-      subForm.value[field] = b64;
-    }
-  } catch {
-    error.value = "Failed to read image";
-  }
-}
+const uploadFiles = ref<Record<string, any[]>>({});
 
-async function onFocusAreaFile(file: any) {
+async function onFileUpload(file: any, target: "event" | "sub", field: string) {
   if (!file) return;
   const raw = file.image || file.raw || file;
   if (!raw || !(raw instanceof File || raw instanceof Blob)) return;
   try {
-    subForm.value.image = await toBase64(raw as File);
+    const b64 = await toBase64(raw as File);
+    if (target === "event" && field === "hero_images") {
+      const current = String(eventForm.value[field] || "").trim();
+      eventForm.value[field] = current ? current + "\n" + b64 : b64;
+    } else if (target === "event") {
+      eventForm.value[field] = b64;
+    } else {
+      subForm.value[field] = b64;
+    }
   } catch {
     error.value = "Failed to read image";
   }
@@ -744,10 +733,13 @@ onMounted(load);
             </div>
             <div class="form-field span-2">
               <label>Hero Images (one per line)</label>
-              <input
-                type="file"
-                accept="image/*"
-                @change="onImageFile($event, 'event', 'hero_images')"
+              <VaFileUpload
+                v-model="uploadFiles['event_hero_images']"
+                dropzone
+                file-types="image/*"
+                upload-button-text="Add hero image"
+                drop-zone-text="Drop image here or click to add"
+                @file-added="onFileUpload($event, 'event', 'hero_images')"
               />
               <div v-if="heroImagePreviews.length" class="hero-previews">
                 <img
@@ -1217,12 +1209,12 @@ onMounted(load);
                   class="form-thumb"
                 />
                 <VaFileUpload
-                  type="single"
+                  v-model="uploadFiles['sub_image']"
                   dropzone
                   file-types="image/*"
                   upload-button-text="Upload image"
                   drop-zone-text="Drop image here or click to upload"
-                  @file-added="onFocusAreaFile"
+                  @file-added="onFileUpload($event, 'sub', 'image')"
                 />
               </div>
               <div class="form-field">
@@ -1267,10 +1259,13 @@ onMounted(load);
                   :src="resolveMediaUrl(subForm.hero_image)"
                   class="form-thumb"
                 />
-                <input
-                  type="file"
-                  accept="image/*"
-                  @change="onImageFile($event, 'sub', 'hero_image')"
+                <VaFileUpload
+                  v-model="uploadFiles['sub_hero_image']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload hero image"
+                  drop-zone-text="Drop image here or click to upload"
+                  @file-added="onFileUpload($event, 'sub', 'hero_image')"
                 />
               </div>
               <div class="form-field span-2">
@@ -1315,10 +1310,13 @@ onMounted(load);
                   :src="resolveMediaUrl(subForm.photo)"
                   class="form-thumb"
                 />
-                <input
-                  type="file"
-                  accept="image/*"
-                  @change="onImageFile($event, 'sub', 'photo')"
+                <VaFileUpload
+                  v-model="uploadFiles['sub_photo']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload photo"
+                  drop-zone-text="Drop photo here or click to upload"
+                  @file-added="onFileUpload($event, 'sub', 'photo')"
                 />
               </div>
               <div class="form-field span-2">
@@ -1419,10 +1417,13 @@ onMounted(load);
                   :src="resolveMediaUrl(subForm.logo)"
                   class="form-thumb"
                 />
-                <input
-                  type="file"
-                  accept="image/*"
-                  @change="onImageFile($event, 'sub', 'logo')"
+                <VaFileUpload
+                  v-model="uploadFiles['sub_logo']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload logo"
+                  drop-zone-text="Drop logo here or click to upload"
+                  @file-added="onFileUpload($event, 'sub', 'logo')"
                 />
               </div>
               <div class="form-field">

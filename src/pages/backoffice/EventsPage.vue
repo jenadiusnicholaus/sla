@@ -1376,7 +1376,10 @@ onMounted(load);
         class="modal-overlay"
         @click.self="subModalOpen = false"
       >
-        <div class="modal-card">
+        <div
+          class="modal-card"
+          :class="{ xlarge: subKind === 'villageHighlights' }"
+        >
           <div class="modal-head">
             <h2>
               {{
@@ -2108,10 +2111,20 @@ onMounted(load);
 }
 .highlight-row {
   display: grid;
-  grid-template-columns: 90px 1.2fr 2fr 60px 30px;
-  gap: 0.4rem;
+  grid-template-columns: 70px 1fr 2.5fr 60px 36px 36px;
+  gap: 0.6rem;
   align-items: center;
-  margin-bottom: 0.4rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e6ebf2;
+}
+.highlight-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.highlight-row .hl-desc {
+  white-space: normal;
+  line-height: 1.4;
 }
 .highlight-row input {
   padding: 0.4rem;

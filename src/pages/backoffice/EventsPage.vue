@@ -156,34 +156,42 @@ const uploadFiles = ref<Record<string, any[]>>({});
 
 async function onFileUpload(file: any, target: "event" | "sub", field: string) {
   if (!file) return;
-  const raw = file.image?.raw || file.image || file.raw || file;
-  if (!raw) return;
-  if (!(raw instanceof File || raw instanceof Blob)) {
-    if (raw.url && /^data:/.test(raw.url)) {
-      if (target === "event" && field === "hero_images") {
-        const current = String(eventForm.value[field] || "").trim();
-        eventForm.value[field] = current ? current + "\n" + raw.url : raw.url;
-      } else if (target === "event") {
-        eventForm.value[field] = raw.url;
-      } else {
-        subForm.value[field] = raw.url;
-      }
-      return;
-    }
+  let raw: any = null;
+  if (file instanceof File || file instanceof Blob) {
+    raw = file;
+  } else if (file.image?.raw instanceof File) {
+    raw = file.image.raw;
+  } else if (file.image instanceof File) {
+    raw = file.image;
+  } else if (file.raw instanceof File) {
+    raw = file.raw;
+  } else if (file.url && /^data:/.test(file.url)) {
+    raw = null;
+    assignBase64(file.url, target, field);
     return;
+  } else if (typeof file.arrayBuffer === "function") {
+    raw = file;
+  } else if (Array.isArray(file) && file.length > 0) {
+    return onFileUpload(file[file.length - 1], target, field);
   }
+
+  if (!raw) return;
   try {
-    const b64 = await toBase64(raw as File);
-    if (target === "event" && field === "hero_images") {
-      const current = String(eventForm.value[field] || "").trim();
-      eventForm.value[field] = current ? current + "\n" + b64 : b64;
-    } else if (target === "event") {
-      eventForm.value[field] = b64;
-    } else {
-      subForm.value[field] = b64;
-    }
+    const b64 = await toBase64(raw);
+    assignBase64(b64, target, field);
   } catch {
     error.value = "Failed to read image";
+  }
+}
+
+function assignBase64(b64: string, target: "event" | "sub", field: string) {
+  if (target === "event" && field === "hero_images") {
+    const current = String(eventForm.value[field] || "").trim();
+    eventForm.value[field] = current ? current + "\n" + b64 : b64;
+  } else if (target === "event") {
+    eventForm.value[field] = b64;
+  } else {
+    subForm.value[field] = b64;
   }
 }
 

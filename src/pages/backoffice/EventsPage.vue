@@ -2111,11 +2111,14 @@ onMounted(load);
 }
 .highlight-row {
   display: grid;
-  grid-template-columns: 70px 1fr 2.5fr 60px 36px 36px;
+  grid-template-columns: 70px 1.5fr 3fr 60px 36px 36px;
   gap: 0.6rem;
   align-items: center;
   padding: 0.5rem 0;
   border-bottom: 1px solid #e6ebf2;
+}
+.form-grid .highlight-row {
+  grid-column: span 2;
 }
 .highlight-row span {
   overflow: hidden;

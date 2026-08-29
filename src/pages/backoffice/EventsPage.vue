@@ -401,6 +401,17 @@ async function saveEvent() {
   }
 }
 
+async function approveRegistration(id: string, current: string) {
+  if (current === "APPROVED") return;
+  try {
+    await registrationsApi.update(id, { status: "APPROVED" });
+    msg.value = "Registration approved";
+    if (selected.value?.year) await loadDetail(selected.value.year);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to approve";
+  }
+}
+
 async function removeEvent(e: ExpoEvent) {
   if (!confirm(`Delete ${e.title}?`)) return;
   try {
@@ -1252,6 +1263,14 @@ onMounted(load);
             hoverable
           >
             <template #cell(actions)="{ rowData }">
+              <button
+                v-if="rowData.status !== 'APPROVED'"
+                class="row-action"
+                title="Approve"
+                @click="approveRegistration(rowData.id, rowData.status)"
+              >
+                <VaIcon name="check" size="18px" />
+              </button>
               <button
                 class="row-action"
                 @click="openSub('registration', rowData)"

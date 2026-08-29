@@ -159,7 +159,13 @@ export interface Registration {
   id: string;
   event: string;
   type: "GUEST" | "SPEAKER" | "VOLUNTEER";
-  status: "CONFIRMED" | "PENDING" | "CANCELLED";
+  status:
+    | "CONFIRMED"
+    | "PENDING_REVIEW"
+    | "APPROVED"
+    | "PENDING"
+    | "CANCELLED"
+    | "REJECTED";
   first_name: string;
   last_name: string;
   email: string;

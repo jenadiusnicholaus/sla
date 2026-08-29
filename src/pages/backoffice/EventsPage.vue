@@ -57,7 +57,6 @@ const events = ref<ExpoEvent[]>([]);
 const view = ref<"list" | "detail">("list");
 const eventModalOpen = ref(false);
 const subModalOpen = ref(false);
-const removedHighlightIds = ref<string[]>([]);
 const activeTab = ref<
   | "overview"
   | "stats"
@@ -95,12 +94,15 @@ const subKind = ref<
   | "focus"
   | "partner"
   | "village"
+  | "villageHighlights"
+  | "villageHighlight"
   | "speaker"
   | "session"
   | "booth"
   | "registration"
 >("stat");
 const subEditingId = ref<string | null>(null);
+const subFormParent = ref<string>("");
 
 const tableColumns = [
   { key: "year", label: "Year", sortable: true },
@@ -269,25 +271,6 @@ async function removeHeroImageViaApi(year: number, heroId: string) {
   }
 }
 
-function addHighlight() {
-  if (!Array.isArray(subForm.value.highlights)) subForm.value.highlights = [];
-  subForm.value.highlights.push({
-    id: undefined,
-    village: subEditingId.value || "",
-    icon: "",
-    title: "",
-    description: "",
-    order: subForm.value.highlights.length + 1,
-  });
-}
-
-function removeHighlight(index: any) {
-  if (!Array.isArray(subForm.value.highlights)) return;
-  const h = subForm.value.highlights[index];
-  if (h?.id) removedHighlightIds.value.push(h.id);
-  subForm.value.highlights.splice(index, 1);
-}
-
 async function load() {
   loading.value = true;
   error.value = "";
@@ -373,6 +356,16 @@ async function loadDetail(year: number) {
     selected.value = e;
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : "Failed to load event";
+  }
+}
+
+async function loadVillageHighlights(villageId: string) {
+  try {
+    const res = await villageHighlightsApi.list({ village: villageId });
+    villageHighlightsList.value = res?.results || [];
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : "Failed to load village highlights";
   }
 }
 
@@ -496,13 +489,17 @@ const subLabels: Record<typeof subKind.value, string> = {
   focus: "Focus Area",
   partner: "Partner",
   village: "Village",
+  villageHighlights: "Village Highlights",
+  villageHighlight: "Village Highlight",
   speaker: "Speaker",
   session: "Session",
   booth: "Booth Application",
   registration: "Registration",
 };
 
-function openSub(kind: typeof subKind.value, item?: unknown) {
+const villageHighlightsList = ref<VillageHighlight[]>([]);
+
+async function openSub(kind: typeof subKind.value, item?: unknown) {
   subKind.value = kind;
   subEditingId.value = null;
   uploadFiles.value = {};
@@ -562,22 +559,13 @@ function openSub(kind: typeof subKind.value, item?: unknown) {
       why_visit: "",
       hero_image: "",
       stats: "[]",
-      highlights: [] as any[],
       order: 1,
     };
     if (item) {
       const v = item as Village;
       subEditingId.value = v.slug;
-      removedHighlightIds.value = [];
-      setDefaults(base, {
-        ...v,
-        stats: JSON.stringify(v.stats || []),
-        highlights: (v.highlights || []).map((h) => ({ ...h })),
-      });
-    } else {
-      removedHighlightIds.value = [];
-      setDefaults(base, {});
-    }
+      setDefaults(base, { ...v, stats: JSON.stringify(v.stats || []) });
+    } else setDefaults(base, {});
   } else if (kind === "speaker") {
     const base = {
       event: eventId,
@@ -631,12 +619,23 @@ function openSub(kind: typeof subKind.value, item?: unknown) {
         admin_notes: b.admin_notes,
       });
     } else setDefaults(base, {});
-  } else if (kind === "registration") {
-    const base = { status: "PENDING" };
+  } else if (kind === "villageHighlights") {
+    const v = item as Village;
+    subFormParent.value = v.id;
+    await loadVillageHighlights(v.id);
+    setDefaults({}, {});
+  } else if (kind === "villageHighlight") {
+    const base = {
+      village: subFormParent.value,
+      icon: "",
+      title: "",
+      description: "",
+      order: 1,
+    };
     if (item) {
-      const r = item as Registration;
-      subEditingId.value = r.id;
-      setDefaults(base, { status: r.status });
+      const h = item as VillageHighlight;
+      subEditingId.value = h.id;
+      setDefaults(base, { ...h });
     } else setDefaults(base, {});
   }
 
@@ -667,35 +666,9 @@ async function saveSub() {
       else await partnersApi.create(body);
     } else if (subKind.value === "village") {
       if (typeof body.stats === "string") body.stats = JSON.parse(body.stats);
-      const highlights = (body.highlights as VillageHighlight[]) || [];
-      delete body.highlights;
-      let savedVillage: Village | null = null;
-      if (subEditingId.value) {
-        savedVillage = (await villagesApi.update(
-          subEditingId.value,
-          body,
-        )) as Village;
-      } else {
-        savedVillage = (await villagesApi.create(body)) as Village;
-      }
-      const villageId = savedVillage?.id || subEditingId.value || "";
-      for (const h of highlights) {
-        const payload = {
-          village: villageId,
-          icon: h.icon,
-          title: h.title,
-          description: h.description,
-          order: h.order,
-        };
-        if (h.id) {
-          await villageHighlightsApi.update(h.id, payload);
-        } else {
-          await villageHighlightsApi.create(payload);
-        }
-      }
-      for (const id of removedHighlightIds.value) {
-        await villageHighlightsApi.remove(id);
-      }
+      if (subEditingId.value)
+        await villagesApi.update(subEditingId.value, body);
+      else await villagesApi.create(body);
     } else if (subKind.value === "speaker") {
       if (subEditingId.value)
         await speakersApi.update(subEditingId.value, body);
@@ -704,6 +677,13 @@ async function saveSub() {
       if (subEditingId.value)
         await sessionsApi.update(subEditingId.value, body);
       else await sessionsApi.create(body);
+    } else if (subKind.value === "villageHighlight") {
+      if (subEditingId.value)
+        await villageHighlightsApi.update(subEditingId.value, body);
+      else await villageHighlightsApi.create(body);
+      await loadVillageHighlights(subFormParent.value);
+      subKind.value = "villageHighlights";
+      return;
     } else if (subKind.value === "booth") {
       if (subEditingId.value)
         await boothApplicationsApi.update(subEditingId.value, body);
@@ -729,7 +709,11 @@ async function removeSub(kind: typeof subKind.value, id: string) {
     else if (kind === "focus") await focusAreasApi.remove(id);
     else if (kind === "partner") await partnersApi.remove(id);
     else if (kind === "village") await villagesApi.remove(id);
-    else if (kind === "speaker") await speakersApi.remove(id);
+    else if (kind === "villageHighlight") {
+      await villageHighlightsApi.remove(id);
+      if (subFormParent.value) await loadVillageHighlights(subFormParent.value);
+      return;
+    } else if (kind === "speaker") await speakersApi.remove(id);
     else if (kind === "session") await sessionsApi.remove(id);
     else if (kind === "booth") await boothApplicationsApi.remove(id);
     else if (kind === "registration") await registrationsApi.remove(id);
@@ -1187,6 +1171,13 @@ onMounted(load);
               />
             </template>
             <template #cell(actions)="{ rowData }">
+              <button
+                class="row-action"
+                title="Highlights"
+                @click="openSub('villageHighlights', rowData)"
+              >
+                <VaIcon name="star" size="18px" />
+              </button>
               <button class="row-action" @click="openSub('village', rowData)">
                 <VaIcon name="edit" size="18px" />
               </button>
@@ -1388,7 +1379,11 @@ onMounted(load);
         <div class="modal-card">
           <div class="modal-head">
             <h2>
-              {{ subEditingId ? "Edit" : "Add" }} {{ subLabels[subKind] }}
+              {{
+                subKind === "villageHighlights"
+                  ? "Village Highlights"
+                  : `${subEditingId ? "Edit" : "Add"} ${subLabels[subKind]}`
+              }}
             </h2>
             <button
               type="button"
@@ -1504,50 +1499,6 @@ onMounted(load);
               <div class="form-field span-2">
                 <label>Stats (JSON)</label>
                 <textarea v-model="subForm.stats" rows="3" />
-              </div>
-              <div class="form-field span-2">
-                <label>Highlights</label>
-                <div
-                  v-for="(h, idx) in subForm.highlights"
-                  :key="h.id || idx"
-                  class="highlight-row"
-                >
-                  <input
-                    v-model="h.icon"
-                    type="text"
-                    placeholder="Icon"
-                    class="hl-icon"
-                  />
-                  <input
-                    v-model="h.title"
-                    type="text"
-                    placeholder="Title"
-                    class="hl-title"
-                  />
-                  <input
-                    v-model="h.description"
-                    type="text"
-                    placeholder="Description"
-                    class="hl-desc"
-                  />
-                  <input
-                    v-model.number="h.order"
-                    type="number"
-                    placeholder="#"
-                    class="hl-order"
-                  />
-                  <button
-                    type="button"
-                    class="row-action"
-                    title="Remove"
-                    @click="removeHighlight(idx)"
-                  >
-                    <VaIcon name="delete" size="16px" />
-                  </button>
-                </div>
-                <button type="button" class="btn-ghost" @click="addHighlight">
-                  + Add Highlight
-                </button>
               </div>
               <div class="form-field">
                 <label>Order</label>
@@ -1685,6 +1636,61 @@ onMounted(load);
                 </select>
               </div>
             </template>
+            <template v-else-if="subKind === 'villageHighlights'">
+              <div class="form-field span-2">
+                <button
+                  type="button"
+                  class="new-btn"
+                  @click="openSub('villageHighlight')"
+                >
+                  <VaIcon name="add" size="18px" /> Add Highlight
+                </button>
+              </div>
+              <div
+                v-for="h in villageHighlightsList"
+                :key="h.id"
+                class="highlight-row"
+              >
+                <span class="hl-icon">{{ h.icon }}</span>
+                <span class="hl-title">{{ h.title }}</span>
+                <span class="hl-desc">{{ h.description }}</span>
+                <span class="hl-order">{{ h.order }}</span>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Edit"
+                  @click="openSub('villageHighlight', h)"
+                >
+                  <VaIcon name="edit" size="16px" />
+                </button>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Delete"
+                  @click="removeSub('villageHighlight', h.id)"
+                >
+                  <VaIcon name="delete" size="16px" />
+                </button>
+              </div>
+            </template>
+            <template v-else-if="subKind === 'villageHighlight'">
+              <div class="form-field span-2">
+                <label>Icon</label>
+                <input v-model="subForm.icon" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Title</label>
+                <input v-model="subForm.title" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Description</label>
+                <textarea v-model="subForm.description" rows="3" />
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
             <template v-else>
               <div class="form-field span-2">
                 <label>Name</label><input v-model="subForm.name" type="text" />
@@ -1729,9 +1735,10 @@ onMounted(load);
               class="btn-ghost"
               @click="subModalOpen = false"
             >
-              Cancel
+              {{ subKind === "villageHighlights" ? "Close" : "Cancel" }}
             </button>
             <button
+              v-if="subKind !== 'villageHighlights'"
               type="button"
               class="btn-primary"
               :disabled="saving"

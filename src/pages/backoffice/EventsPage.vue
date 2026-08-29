@@ -7,6 +7,7 @@ import {
   partnersApi,
   villagesApi,
   villageHighlightsApi,
+  villageBoothsApi,
   speakersApi,
   sessionsApi,
   boothApplicationsApi,
@@ -19,6 +20,7 @@ import type {
   Partner,
   Village,
   VillageHighlight,
+  VillageBooth,
   Speaker,
   Session,
   BoothApplication,
@@ -96,6 +98,8 @@ const subKind = ref<
   | "village"
   | "villageHighlights"
   | "villageHighlight"
+  | "villageBooths"
+  | "villageBooth"
   | "speaker"
   | "session"
   | "booth"
@@ -424,6 +428,16 @@ async function loadVillageHighlights(villageId: string) {
   }
 }
 
+async function loadVillageBooths(villageId: string) {
+  try {
+    const res = await villageBoothsApi.list({ village: villageId });
+    villageBoothsList.value = res?.results || [];
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : "Failed to load village booths";
+  }
+}
+
 async function loadMetrics(year: number) {
   try {
     const res = await expoEventsApi.metrics(year);
@@ -546,6 +560,8 @@ const subLabels: Record<typeof subKind.value, string> = {
   village: "Village",
   villageHighlights: "Village Highlights",
   villageHighlight: "Village Highlight",
+  villageBooths: "Village Booths",
+  villageBooth: "Village Booth",
   speaker: "Speaker",
   session: "Session",
   booth: "Booth Application",
@@ -553,6 +569,7 @@ const subLabels: Record<typeof subKind.value, string> = {
 };
 
 const villageHighlightsList = ref<VillageHighlight[]>([]);
+const villageBoothsList = ref<VillageBooth[]>([]);
 
 async function openSub(kind: typeof subKind.value, item?: unknown) {
   subKind.value = kind;
@@ -692,6 +709,30 @@ async function openSub(kind: typeof subKind.value, item?: unknown) {
       subEditingId.value = h.id;
       setDefaults(base, { ...h });
     } else setDefaults(base, {});
+  } else if (kind === "villageBooths") {
+    const v = item as Village;
+    subFormParent.value = v.id;
+    await loadVillageBooths(v.id);
+    setDefaults({}, {});
+  } else if (kind === "villageBooth") {
+    const base = {
+      village: subFormParent.value,
+      name: "",
+      org: "",
+      booth_number: "",
+      tag: "",
+      description: "",
+      live_demo: "",
+      website_url: "",
+      logo: "",
+      is_featured: false,
+      order: 1,
+    };
+    if (item) {
+      const b = item as VillageBooth;
+      subEditingId.value = b.id;
+      setDefaults(base, { ...b });
+    } else setDefaults(base, {});
   }
 
   subModalOpen.value = true;
@@ -739,6 +780,13 @@ async function saveSub() {
       await loadVillageHighlights(subFormParent.value);
       subKind.value = "villageHighlights";
       return;
+    } else if (subKind.value === "villageBooth") {
+      if (subEditingId.value)
+        await villageBoothsApi.update(subEditingId.value, body);
+      else await villageBoothsApi.create(body);
+      await loadVillageBooths(subFormParent.value);
+      subKind.value = "villageBooths";
+      return;
     } else if (subKind.value === "booth") {
       if (subEditingId.value)
         await boothApplicationsApi.update(subEditingId.value, body);
@@ -768,8 +816,13 @@ async function removeSub(kind: typeof subKind.value, id: string) {
       await villageHighlightsApi.remove(id);
       if (subFormParent.value) await loadVillageHighlights(subFormParent.value);
       return;
+    } else if (kind === "villageBooth") {
+      await villageBoothsApi.remove(id);
+      if (subFormParent.value) await loadVillageBooths(subFormParent.value);
+      return;
     } else if (kind === "speaker") await speakersApi.remove(id);
-    else if (kind === "session") await sessionsApi.remove(id);
+    else if (kind === "session")
+      await sessionsApi.update(id, { is_deleted: true });
     else if (kind === "booth") await boothApplicationsApi.remove(id);
     else if (kind === "registration") await registrationsApi.remove(id);
     msg.value = "Deleted";
@@ -1233,6 +1286,13 @@ onMounted(load);
               >
                 <VaIcon name="star" size="18px" />
               </button>
+              <button
+                class="row-action"
+                title="Booths"
+                @click="openSub('villageBooths', rowData)"
+              >
+                <VaIcon name="store" size="18px" />
+              </button>
               <button class="row-action" @click="openSub('village', rowData)">
                 <VaIcon name="edit" size="18px" />
               </button>
@@ -1438,14 +1498,19 @@ onMounted(load);
       >
         <div
           class="modal-card"
-          :class="{ xlarge: subKind === 'villageHighlights' }"
+          :class="{
+            xlarge:
+              subKind === 'villageHighlights' || subKind === 'villageBooths',
+          }"
         >
           <div class="modal-head">
             <h2>
               {{
                 subKind === "villageHighlights"
                   ? "Village Highlights"
-                  : `${subEditingId ? "Edit" : "Add"} ${subLabels[subKind]}`
+                  : subKind === "villageBooths"
+                    ? "Village Booths"
+                    : `${subEditingId ? "Edit" : "Add"} ${subLabels[subKind]}`
               }}
             </h2>
             <button
@@ -1779,6 +1844,105 @@ onMounted(load);
                 <input v-model.number="subForm.order" type="number" />
               </div>
             </template>
+            <template v-else-if="subKind === 'villageBooths'">
+              <div class="form-field span-2">
+                <button
+                  type="button"
+                  class="new-btn"
+                  @click="openSub('villageBooth')"
+                >
+                  <VaIcon name="add" size="18px" /> Add Booth
+                </button>
+              </div>
+              <div v-for="b in villageBoothsList" :key="b.id" class="booth-row">
+                <img
+                  v-if="b.logo"
+                  :src="resolveMediaUrl(b.logo)"
+                  class="booth-thumb"
+                  :alt="b.name"
+                />
+                <span v-else class="booth-thumb no-img">—</span>
+                <span class="booth-name">{{ b.name }}</span>
+                <span class="booth-org">{{ b.org }}</span>
+                <span class="booth-number">{{ b.booth_number }}</span>
+                <span class="booth-tag">{{ b.tag }}</span>
+                <span class="booth-featured">{{
+                  b.is_featured ? "Yes" : "No"
+                }}</span>
+                <span class="booth-order">{{ b.order }}</span>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Edit"
+                  @click="openSub('villageBooth', b)"
+                >
+                  <VaIcon name="edit" size="16px" />
+                </button>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Delete"
+                  @click="removeSub('villageBooth', b.id)"
+                >
+                  <VaIcon name="delete" size="16px" />
+                </button>
+              </div>
+            </template>
+            <template v-else-if="subKind === 'villageBooth'">
+              <div class="form-field span-2">
+                <label>Name</label>
+                <input v-model="subForm.name" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Organization</label>
+                <input v-model="subForm.org" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Booth Number</label>
+                <input v-model="subForm.booth_number" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Tag</label>
+                <input v-model="subForm.tag" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Description</label>
+                <textarea v-model="subForm.description" rows="3" />
+              </div>
+              <div class="form-field span-2">
+                <label>Live Demo</label>
+                <input v-model="subForm.live_demo" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Website URL</label>
+                <input v-model="subForm.website_url" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Logo</label>
+                <img
+                  v-if="subForm.logo"
+                  :src="resolveMediaUrl(subForm.logo)"
+                  class="form-thumb"
+                />
+                <VaFileUpload
+                  v-model="uploadFiles['sub_logo']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload logo"
+                  drop-zone-text="Drop logo here or click to upload"
+                />
+              </div>
+              <div class="form-field">
+                <label class="inline-check">
+                  <input v-model="subForm.is_featured" type="checkbox" />
+                  Featured
+                </label>
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
             <template v-else>
               <div class="form-field span-2">
                 <label>Name</label><input v-model="subForm.name" type="text" />
@@ -1823,10 +1987,16 @@ onMounted(load);
               class="btn-ghost"
               @click="subModalOpen = false"
             >
-              {{ subKind === "villageHighlights" ? "Close" : "Cancel" }}
+              {{
+                subKind === "villageHighlights" || subKind === "villageBooths"
+                  ? "Close"
+                  : "Cancel"
+              }}
             </button>
             <button
-              v-if="subKind !== 'villageHighlights'"
+              v-if="
+                subKind !== 'villageHighlights' && subKind !== 'villageBooths'
+              "
               type="button"
               class="btn-primary"
               :disabled="saving"
@@ -2223,6 +2393,44 @@ onMounted(load);
 .highlight-row .row-action {
   width: 28px;
   height: 28px;
+}
+.booth-row {
+  display: grid;
+  grid-template-columns: 48px 1.5fr 1.2fr 100px 100px 70px 60px 36px 36px;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e6ebf2;
+}
+.form-grid .booth-row {
+  grid-column: span 2;
+}
+.booth-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.booth-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #5b6b82;
+}
+.booth-row .row-action {
+  width: 28px;
+  height: 28px;
+}
+.inline-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
 }
 .icon-value {
   display: flex;

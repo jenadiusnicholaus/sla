@@ -113,7 +113,7 @@ export interface VillageBooth {
   description: string;
   live_demo: string;
   website_url: string;
-  logo_url: string;
+  logo: string;
   is_featured: boolean;
   order: number;
 }

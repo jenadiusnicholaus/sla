@@ -143,7 +143,7 @@ function resolveMediaUrl(path: string): string {
   return base + (path.startsWith("/") ? path.slice(1) : path);
 }
 
-function toBase64(file: File): Promise<string> {
+function toBase64(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -154,19 +154,46 @@ function toBase64(file: File): Promise<string> {
 
 const uploadFiles = ref<Record<string, any[]>>({});
 
+const uploadFieldMap: Record<
+  string,
+  { target: "event" | "sub"; field: string }
+> = {
+  event_hero_images: { target: "event", field: "hero_images" },
+  sub_image: { target: "sub", field: "image" },
+  sub_hero_image: { target: "sub", field: "hero_image" },
+  sub_photo: { target: "sub", field: "photo" },
+  sub_logo: { target: "sub", field: "logo" },
+};
+
+async function extractFile(item: any): Promise<string | null> {
+  if (!item) return null;
+  if (item instanceof File || item instanceof Blob) return toBase64(item);
+  if (item.raw instanceof File || item.raw instanceof Blob)
+    return toBase64(item.raw);
+  if (item.image instanceof File || item.image instanceof Blob)
+    return toBase64(item.image);
+  if (item.image?.raw instanceof File || item.image?.raw instanceof Blob)
+    return toBase64(item.image.raw);
+  if (item.url && /^data:/.test(item.url)) return item.url;
+  if (typeof item.arrayBuffer === "function") return toBase64(item as Blob);
+  return null;
+}
+
 async function onFileUpload(file: any, target: "event" | "sub", field: string) {
   if (!file) return;
   let raw: any = null;
   if (file instanceof File || file instanceof Blob) {
     raw = file;
-  } else if (file.image?.raw instanceof File) {
+  } else if (
+    file.image?.raw instanceof File ||
+    file.image?.raw instanceof Blob
+  ) {
     raw = file.image.raw;
-  } else if (file.image instanceof File) {
+  } else if (file.image instanceof File || file.image instanceof Blob) {
     raw = file.image;
-  } else if (file.raw instanceof File) {
+  } else if (file.raw instanceof File || file.raw instanceof Blob) {
     raw = file.raw;
   } else if (file.url && /^data:/.test(file.url)) {
-    raw = null;
     assignBase64(file.url, target, field);
     return;
   } else if (typeof file.arrayBuffer === "function") {
@@ -183,6 +210,21 @@ async function onFileUpload(file: any, target: "event" | "sub", field: string) {
     error.value = "Failed to read image";
   }
 }
+
+watch(
+  uploadFiles,
+  async (val) => {
+    for (const [key, files] of Object.entries(val)) {
+      if (!files || !files.length) continue;
+      const mapping = uploadFieldMap[key];
+      if (!mapping) continue;
+      const last = files[files.length - 1];
+      const b64 = await extractFile(last);
+      if (b64) assignBase64(b64, mapping.target, mapping.field);
+    }
+  },
+  { deep: true },
+);
 
 function assignBase64(b64: string, target: "event" | "sub", field: string) {
   if (target === "event" && field === "hero_images") {
@@ -210,6 +252,7 @@ async function load() {
 
 function openNew() {
   selected.value = null;
+  uploadFiles.value = {};
   eventForm.value = {
     year: new Date().getFullYear() + 1,
     title: "",
@@ -231,6 +274,7 @@ function openNew() {
 
 function openEdit(e: ExpoEvent) {
   selected.value = e;
+  uploadFiles.value = {};
   eventForm.value = {
     year: e.year,
     title: e.title,
@@ -297,7 +341,7 @@ function buildEventBody(): Record<string, unknown> {
   b.end_date = fromLocal(b.end_date as string);
   b.venue_lat = b.venue_lat ? parseFloat(b.venue_lat as string) : null;
   b.venue_lng = b.venue_lng ? parseFloat(b.venue_lng as string) : null;
-  b.hero_images = (b.hero_images as string)
+  b.hero_images = String(b.hero_images || "")
     .split("\n")
     .map((s) => s.trim())
     .filter(Boolean);
@@ -396,6 +440,7 @@ const subLabels: Record<typeof subKind.value, string> = {
 function openSub(kind: typeof subKind.value, item?: unknown) {
   subKind.value = kind;
   subEditingId.value = null;
+  uploadFiles.value = {};
   const eventId = selected.value?.id;
 
   function setDefaults(form: Record<string, any>, edit: Record<string, any>) {

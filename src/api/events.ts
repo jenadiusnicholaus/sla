@@ -7,6 +7,14 @@ export interface Paginated<T> {
   results: T[];
 }
 
+export interface HeroImage {
+  id: string;
+  image: string;
+  order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ExpoEvent {
   id: string;
   year: number;
@@ -19,7 +27,7 @@ export interface ExpoEvent {
   venue_address: string;
   venue_lat: number | null;
   venue_lng: number | null;
-  hero_images: string[];
+  hero_images: HeroImage[];
   is_active: boolean;
   is_published: boolean;
   created_at: string;
@@ -294,6 +302,16 @@ export const expoEventsApi = {
     ),
   exportBadges: (year: number, type = "all") =>
     api<string>(`/admin/events/${year}/export/badges/?type=${type}`),
+  addHeroImage: (year: number, body: { image_base64?: string } | FormData) =>
+    api<{ message: string; hero_image: HeroImage }>(
+      `/admin/expo-events/${year}/hero-images/`,
+      { method: "POST", body },
+    ),
+  removeHeroImages: (year: number, body: { ids?: string[]; urls?: string[] }) =>
+    api<{ message: string; removed: string[]; hero_images: HeroImage[] }>(
+      `/admin/expo-events/${year}/hero-images/`,
+      { method: "DELETE", body },
+    ),
 };
 
 export const eventStatsApi = {

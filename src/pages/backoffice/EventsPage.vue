@@ -59,7 +59,7 @@ const eventForm = ref<Record<string, any>>({
   venue_address: "",
   venue_lat: "",
   venue_lng: "",
-  hero_images: "",
+  hero_images: [] as any[],
   is_active: false,
   is_published: false,
 });
@@ -99,11 +99,12 @@ const tableRows = computed(() =>
 );
 
 const heroImagePreviews = computed(() =>
-  String(eventForm.value.hero_images || "")
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((s) => resolveMediaUrl(s)),
+  (eventForm.value.hero_images || [])
+    .filter((h: any) => !h.isRemoved)
+    .map((h: any) => ({
+      ...h,
+      url: resolveMediaUrl(h.image),
+    })),
 );
 
 function statusPills(e: ExpoEvent) {
@@ -228,12 +229,41 @@ watch(
 
 function assignBase64(b64: string, target: "event" | "sub", field: string) {
   if (target === "event" && field === "hero_images") {
-    const current = String(eventForm.value[field] || "").trim();
-    eventForm.value[field] = current ? current + "\n" + b64 : b64;
+    if (!Array.isArray(eventForm.value[field])) eventForm.value[field] = [];
+    eventForm.value[field].push({ image: b64, isNew: true });
   } else if (target === "event") {
     eventForm.value[field] = b64;
   } else {
     subForm.value[field] = b64;
+  }
+}
+
+function removeHeroImage(index: number) {
+  const images = eventForm.value.hero_images;
+  if (!images || !images[index]) return;
+  if (images[index].isNew) {
+    images.splice(index, 1);
+  } else {
+    images[index].isRemoved = true;
+  }
+}
+
+async function addHeroImageViaApi(year: number, b64: string) {
+  try {
+    await expoEventsApi.addHeroImage(year, { image_base64: b64 });
+    await loadDetail(year);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to add hero image";
+  }
+}
+
+async function removeHeroImageViaApi(year: number, heroId: string) {
+  try {
+    await expoEventsApi.removeHeroImages(year, { ids: [heroId] });
+    await loadDetail(year);
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : "Failed to remove hero image";
   }
 }
 
@@ -264,7 +294,7 @@ function openNew() {
     venue_address: "",
     venue_lat: "",
     venue_lng: "",
-    hero_images: "",
+    hero_images: [] as any[],
     is_active: false,
     is_published: false,
   };
@@ -286,7 +316,11 @@ function openEdit(e: ExpoEvent) {
     venue_address: e.venue_address,
     venue_lat: e.venue_lat ?? "",
     venue_lng: e.venue_lng ?? "",
-    hero_images: (e.hero_images || []).join("\n"),
+    hero_images: (e.hero_images || []).map((h) => ({
+      id: h.id,
+      image: h.image,
+      order: h.order,
+    })),
     is_active: e.is_active,
     is_published: e.is_published,
   };
@@ -341,10 +375,9 @@ function buildEventBody(): Record<string, unknown> {
   b.end_date = fromLocal(b.end_date as string);
   b.venue_lat = b.venue_lat ? parseFloat(b.venue_lat as string) : null;
   b.venue_lng = b.venue_lng ? parseFloat(b.venue_lng as string) : null;
-  b.hero_images = String(b.hero_images || "")
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean);
+  b.hero_images = (b.hero_images as any[])
+    .filter((h: any) => !h.isRemoved)
+    .map((h: any) => h.image);
   return b;
 }
 
@@ -802,7 +835,7 @@ onMounted(load);
               ><input v-model="eventForm.venue_lng" type="number" step="any" />
             </div>
             <div class="form-field span-2">
-              <label>Hero Images (one per line)</label>
+              <label>Hero Images</label>
               <VaFileUpload
                 v-model="uploadFiles['event_hero_images']"
                 dropzone
@@ -812,12 +845,20 @@ onMounted(load);
                 @file-added="onFileUpload($event, 'event', 'hero_images')"
               />
               <div v-if="heroImagePreviews.length" class="hero-previews">
-                <img
-                  v-for="(src, i) in heroImagePreviews"
+                <div
+                  v-for="(img, i) in heroImagePreviews"
                   :key="i"
-                  :src="src"
-                  class="form-thumb"
-                />
+                  class="hero-preview-item"
+                >
+                  <img :src="img.url" class="form-thumb" />
+                  <button
+                    type="button"
+                    class="hero-remove-btn"
+                    @click.prevent="removeHeroImage(i)"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
             </div>
             <div class="form-field span-2">
@@ -895,9 +936,9 @@ onMounted(load);
           </dl>
           <div v-if="selected?.hero_images?.length" class="hero-gallery">
             <img
-              v-for="(src, idx) in selected.hero_images"
+              v-for="(img, idx) in selected.hero_images"
               :key="idx"
-              :src="resolveMediaUrl(src)"
+              :src="resolveMediaUrl(img.image)"
               class="hero-thumb"
             />
           </div>
@@ -1896,6 +1937,30 @@ onMounted(load);
   flex-wrap: wrap;
   gap: 0.4rem;
   margin: 0.4rem 0;
+}
+.hero-preview-item {
+  position: relative;
+}
+.hero-remove-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #b42318;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.hero-remove-btn:hover {
+  background: #d32f2f;
 }
 .form-thumb,
 .hero-thumb {

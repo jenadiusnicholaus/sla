@@ -104,6 +104,61 @@ const subKind = ref<
 const subEditingId = ref<string | null>(null);
 const subFormParent = ref<string>("");
 
+const iconOptions = [
+  "add",
+  "edit",
+  "delete",
+  "star",
+  "home",
+  "info",
+  "settings",
+  "person",
+  "group",
+  "event",
+  "place",
+  "mail",
+  "phone",
+  "check",
+  "close",
+  "search",
+  "visibility",
+  "chat",
+  "wifi",
+  "computer",
+  "code",
+  "cloud",
+  "dashboard",
+  "school",
+  "business",
+  "health_and_safety",
+  "science",
+  "agriculture",
+  "rocket",
+  "shopping_bag",
+  "work",
+  "public",
+  "lightbulb",
+  "thumb_up",
+  "trending_up",
+  "support_agent",
+  "build",
+  "handshake",
+  "shield",
+  "lock",
+  "memory",
+  "speed",
+  "nature",
+  "emoji_events",
+  "music_note",
+  "sports_esports",
+  "restaurant",
+  "airplanemode_active",
+  "train",
+  "directions_bus",
+  "directions_car",
+  "pedal_bike",
+];
+
 const tableColumns = [
   { key: "year", label: "Year", sortable: true },
   { key: "title", label: "Title", sortable: true },
@@ -1654,7 +1709,10 @@ onMounted(load);
                 :key="h.id"
                 class="highlight-row"
               >
-                <span class="hl-icon">{{ h.icon }}</span>
+                <span class="hl-icon">
+                  <VaIcon v-if="h.icon" :name="h.icon" size="20px" />
+                  <span v-else>—</span>
+                </span>
                 <span class="hl-title">{{ h.title }}</span>
                 <span class="hl-desc">{{ h.description }}</span>
                 <span class="hl-order">{{ h.order }}</span>
@@ -1678,8 +1736,30 @@ onMounted(load);
             </template>
             <template v-else-if="subKind === 'villageHighlight'">
               <div class="form-field span-2">
-                <label>Icon</label>
-                <input v-model="subForm.icon" type="text" />
+                <label>Selected Icon</label>
+                <div class="icon-value">
+                  <VaIcon
+                    v-if="subForm.icon"
+                    :name="subForm.icon"
+                    size="24px"
+                  />
+                  <span v-else>—</span>
+                  <span class="icon-name">{{ subForm.icon || "None" }}</span>
+                </div>
+                <label class="icon-label">Choose an icon</label>
+                <div class="icon-picker">
+                  <button
+                    v-for="icon in iconOptions"
+                    :key="icon"
+                    type="button"
+                    class="icon-option"
+                    :class="{ selected: subForm.icon === icon }"
+                    :title="icon"
+                    @click="subForm.icon = icon"
+                  >
+                    <VaIcon :name="icon" size="20px" />
+                  </button>
+                </div>
               </div>
               <div class="form-field span-2">
                 <label>Title</label>
@@ -2138,6 +2218,51 @@ onMounted(load);
 .highlight-row .row-action {
   width: 28px;
   height: 28px;
+}
+.icon-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #e6ebf2;
+  border-radius: 6px;
+  min-height: 36px;
+}
+.icon-name {
+  font-size: 0.85rem;
+  color: #5b6b82;
+}
+.icon-label {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #5b6b82;
+}
+.icon-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 0.4rem;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 0.4rem;
+  border: 1px solid #e6ebf2;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+.icon-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #d0d9e6;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+.icon-option.selected,
+.icon-option:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
 }
 .focus-card {
   border: 1px solid #e6ebf2;

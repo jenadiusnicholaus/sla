@@ -1326,6 +1326,11 @@ onMounted(load);
         </div>
 
         <div v-else-if="activeTab === 'booths'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('booth')">
+              <VaIcon name="add" size="18px" /> Add Booth App
+            </button>
+          </div>
           <VaDataTable
             :items="selected?.booth_applications || []"
             :columns="[

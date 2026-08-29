@@ -156,8 +156,22 @@ const uploadFiles = ref<Record<string, any[]>>({});
 
 async function onFileUpload(file: any, target: "event" | "sub", field: string) {
   if (!file) return;
-  const raw = file.image || file.raw || file;
-  if (!raw || !(raw instanceof File || raw instanceof Blob)) return;
+  const raw = file.image?.raw || file.image || file.raw || file;
+  if (!raw) return;
+  if (!(raw instanceof File || raw instanceof Blob)) {
+    if (raw.url && /^data:/.test(raw.url)) {
+      if (target === "event" && field === "hero_images") {
+        const current = String(eventForm.value[field] || "").trim();
+        eventForm.value[field] = current ? current + "\n" + raw.url : raw.url;
+      } else if (target === "event") {
+        eventForm.value[field] = raw.url;
+      } else {
+        subForm.value[field] = raw.url;
+      }
+      return;
+    }
+    return;
+  }
   try {
     const b64 = await toBase64(raw as File);
     if (target === "event" && field === "hero_images") {
@@ -507,6 +521,9 @@ async function saveSub() {
   error.value = "";
   try {
     const body = { ...subForm.value };
+    for (const k of ["image", "logo", "photo", "hero_image"]) {
+      if (k in body && !body[k]) delete body[k];
+    }
     if (subKind.value === "stat") {
       if (subEditingId.value)
         await eventStatsApi.update(subEditingId.value, body);

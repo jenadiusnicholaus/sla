@@ -1,0 +1,2616 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from "vue";
+import {
+  expoEventsApi,
+  eventStatsApi,
+  focusAreasApi,
+  partnersApi,
+  villagesApi,
+  villageHighlightsApi,
+  villageBoothsApi,
+  speakersApi,
+  sessionsApi,
+  boothApplicationsApi,
+  registrationsApi,
+} from "@/api/events";
+import type {
+  ExpoEvent,
+  EventStat,
+  FocusArea,
+  Partner,
+  Village,
+  VillageHighlight,
+  VillageBooth,
+  Speaker,
+  Session,
+  BoothApplication,
+  Registration,
+  DashboardMetrics,
+} from "@/api/events";
+import { MEDIA_BASE } from "@/api/client";
+import { marked } from "marked";
+
+function renderMarkdown(md: string): string {
+  if (!md) return "";
+  return marked.parse(md, { async: false }) as string;
+}
+
+const showMdPreview = ref(false);
+
+function insertMd(prefix: string, suffix = "") {
+  const ta = document.querySelector<HTMLTextAreaElement>("#md-editor");
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const text = eventForm.value.description || "";
+  const sel = text.substring(start, end);
+  const newText =
+    text.substring(0, start) + prefix + sel + suffix + text.substring(end);
+  eventForm.value.description = newText;
+  ta.focus();
+  ta.setSelectionRange(start + prefix.length, end + prefix.length);
+}
+
+const loading = ref(false);
+const saving = ref(false);
+const error = ref("");
+const msg = ref("");
+const events = ref<ExpoEvent[]>([]);
+const view = ref<"list" | "detail">("list");
+const eventModalOpen = ref(false);
+const subModalOpen = ref(false);
+const activeTab = ref<
+  | "overview"
+  | "stats"
+  | "focus"
+  | "partners"
+  | "villages"
+  | "speakers"
+  | "sessions"
+  | "booths"
+  | "registrations"
+  | "metrics"
+>("overview");
+const selected = ref<ExpoEvent | null>(null);
+const metrics = ref<DashboardMetrics | null>(null);
+
+const eventForm = ref<Record<string, any>>({
+  year: new Date().getFullYear() + 1,
+  title: "",
+  tagline: "",
+  description: "",
+  start_date: "",
+  end_date: "",
+  venue_name: "",
+  venue_address: "",
+  venue_lat: "",
+  venue_lng: "",
+  hero_images: [] as any[],
+  is_active: false,
+  is_published: false,
+});
+
+const subForm = ref<Record<string, any>>({});
+const subKind = ref<
+  | "stat"
+  | "focus"
+  | "partner"
+  | "village"
+  | "villageHighlights"
+  | "villageHighlight"
+  | "villageBooths"
+  | "villageBooth"
+  | "speaker"
+  | "session"
+  | "booth"
+  | "registration"
+>("stat");
+const subEditingId = ref<string | null>(null);
+const subFormParent = ref<string>("");
+
+const iconOptions = [
+  "add",
+  "edit",
+  "delete",
+  "star",
+  "home",
+  "info",
+  "settings",
+  "person",
+  "group",
+  "event",
+  "place",
+  "mail",
+  "phone",
+  "check",
+  "close",
+  "search",
+  "visibility",
+  "chat",
+  "wifi",
+  "computer",
+  "code",
+  "cloud",
+  "dashboard",
+  "school",
+  "business",
+  "health_and_safety",
+  "science",
+  "agriculture",
+  "rocket",
+  "shopping_bag",
+  "work",
+  "public",
+  "lightbulb",
+  "thumb_up",
+  "trending_up",
+  "support_agent",
+  "build",
+  "handshake",
+  "shield",
+  "lock",
+  "memory",
+  "speed",
+  "nature",
+  "emoji_events",
+  "music_note",
+  "sports_esports",
+  "restaurant",
+  "airplanemode_active",
+  "train",
+  "directions_bus",
+  "directions_car",
+  "pedal_bike",
+];
+
+const tableColumns = [
+  { key: "year", label: "Year", sortable: true },
+  { key: "title", label: "Title", sortable: true },
+  { key: "dates", label: "Dates" },
+  { key: "venue", label: "Venue" },
+  { key: "status", label: "Status" },
+  { key: "actions", label: "" },
+];
+
+const tableRows = computed(() =>
+  events.value.map((e) => ({
+    year: e.year,
+    title: e.title,
+    dates: formatDate(e.start_date) + " — " + formatDate(e.end_date),
+    venue: e.venue_name || "—",
+    status: statusPills(e),
+    actions: "",
+    _raw: e,
+  })),
+);
+
+interface HeroPreview {
+  id?: string;
+  image: string;
+  order?: number;
+  isNew?: boolean;
+  isRemoved?: boolean;
+  url: string;
+}
+
+const heroImagePreviews = computed<HeroPreview[]>(() =>
+  (eventForm.value.hero_images || [])
+    .filter((h: any) => !h.isRemoved)
+    .map((h: any) => ({
+      ...h,
+      url: resolveMediaUrl(h.image),
+    })),
+);
+
+function statusPills(e: ExpoEvent) {
+  const pills = [];
+  if (e.is_published) pills.push("published");
+  if (e.is_active) pills.push("active");
+  if (!pills.length) pills.push("draft");
+  return pills.join(", ");
+}
+
+function formatDate(v: string) {
+  if (!v) return "—";
+  const d = new Date(v);
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function toLocal(v: string) {
+  if (!v) return "";
+  const d = new Date(v);
+  const off = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - off).toISOString().slice(0, 16);
+}
+
+function fromLocal(v: string) {
+  if (!v) return null;
+  return new Date(v).toISOString();
+}
+
+function resolveMediaUrl(path: string): string {
+  if (!path) return "";
+  if (/^(https?:|data:)/.test(path)) return path;
+  const base = MEDIA_BASE.endsWith("/") ? MEDIA_BASE : MEDIA_BASE + "/";
+  return base + (path.startsWith("/") ? path.slice(1) : path);
+}
+
+function toBase64(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+const uploadFiles = ref<Record<string, any[]>>({});
+
+const uploadFieldMap: Record<
+  string,
+  { target: "event" | "sub"; field: string }
+> = {
+  event_hero_images: { target: "event", field: "hero_images" },
+  sub_image: { target: "sub", field: "image" },
+  sub_hero_image: { target: "sub", field: "hero_image" },
+  sub_photo: { target: "sub", field: "photo" },
+  sub_logo: { target: "sub", field: "logo" },
+};
+
+async function extractFile(item: any): Promise<string | null> {
+  if (!item) return null;
+  if (item instanceof File || item instanceof Blob) return toBase64(item);
+  if (item.raw instanceof File || item.raw instanceof Blob)
+    return toBase64(item.raw);
+  if (item.image instanceof File || item.image instanceof Blob)
+    return toBase64(item.image);
+  if (item.image?.raw instanceof File || item.image?.raw instanceof Blob)
+    return toBase64(item.image.raw);
+  if (item.url && /^data:/.test(item.url)) return item.url;
+  if (typeof item.arrayBuffer === "function") return toBase64(item as Blob);
+  return null;
+}
+
+watch(
+  uploadFiles,
+  async (val) => {
+    for (const [key, files] of Object.entries(val)) {
+      if (!files || !files.length) continue;
+      const mapping = uploadFieldMap[key];
+      if (!mapping) continue;
+      const last = files[files.length - 1];
+      const b64 = await extractFile(last);
+      if (b64) assignBase64(b64, mapping.target, mapping.field);
+    }
+  },
+  { deep: true },
+);
+
+function assignBase64(b64: string, target: "event" | "sub", field: string) {
+  if (target === "event" && field === "hero_images") {
+    if (!Array.isArray(eventForm.value[field])) eventForm.value[field] = [];
+    eventForm.value[field].push({ image: b64, isNew: true });
+  } else if (target === "event") {
+    eventForm.value[field] = b64;
+  } else {
+    subForm.value[field] = b64;
+  }
+}
+
+function removeHeroImage(index: number) {
+  const images = eventForm.value.hero_images;
+  if (!images || !images[index]) return;
+  if (images[index].isNew) {
+    images.splice(index, 1);
+  } else {
+    images[index].isRemoved = true;
+  }
+}
+
+async function addHeroImageViaApi(year: number, b64: string) {
+  try {
+    await expoEventsApi.addHeroImage(year, { image_base64: b64 });
+    await loadDetail(year);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to add hero image";
+  }
+}
+
+async function removeHeroImageViaApi(year: number, heroId: string) {
+  try {
+    await expoEventsApi.removeHeroImages(year, { ids: [heroId] });
+    await loadDetail(year);
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : "Failed to remove hero image";
+  }
+}
+
+async function load() {
+  loading.value = true;
+  error.value = "";
+  try {
+    const res = await expoEventsApi.list();
+    events.value = res?.results || [];
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to load events";
+  } finally {
+    loading.value = false;
+  }
+}
+
+function openNew() {
+  selected.value = null;
+  uploadFiles.value = {};
+  eventForm.value = {
+    year: new Date().getFullYear() + 1,
+    title: "",
+    tagline: "",
+    description: "",
+    start_date: "",
+    end_date: "",
+    venue_name: "",
+    venue_address: "",
+    venue_lat: "",
+    venue_lng: "",
+    hero_images: [] as any[],
+    is_active: false,
+    is_published: false,
+  };
+  eventModalOpen.value = true;
+  msg.value = "";
+}
+
+function openEdit(e: ExpoEvent) {
+  selected.value = e;
+  uploadFiles.value = {};
+  eventForm.value = {
+    year: e.year,
+    title: e.title,
+    tagline: e.tagline,
+    description: e.description,
+    start_date: toLocal(e.start_date),
+    end_date: toLocal(e.end_date),
+    venue_name: e.venue_name,
+    venue_address: e.venue_address,
+    venue_lat: e.venue_lat ?? "",
+    venue_lng: e.venue_lng ?? "",
+    hero_images: (e.hero_images || []).map((h) => ({
+      id: h.id,
+      image: h.image,
+      order: h.order,
+    })),
+    is_active: e.is_active,
+    is_published: e.is_published,
+  };
+  eventModalOpen.value = true;
+  msg.value = "";
+}
+
+async function openDetail(e: ExpoEvent) {
+  selected.value = e;
+  view.value = "detail";
+  activeTab.value = "overview";
+  await loadDetail(e.year);
+}
+
+function backToList() {
+  view.value = "list";
+  selected.value = null;
+  activeTab.value = "overview";
+  metrics.value = null;
+}
+
+function onRowClick(e: { item: { _raw: ExpoEvent } }) {
+  openDetail(e.item._raw);
+}
+
+async function loadDetail(year: number) {
+  try {
+    const e = await expoEventsApi.get(year);
+    selected.value = e;
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to load event";
+  }
+}
+
+async function loadVillageHighlights(villageId: string) {
+  try {
+    const res = await villageHighlightsApi.list({ village: villageId });
+    villageHighlightsList.value = res?.results || [];
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : "Failed to load village highlights";
+  }
+}
+
+async function loadVillageBooths(villageId: string) {
+  try {
+    const res = await villageBoothsApi.list({ village: villageId });
+    villageBoothsList.value = res?.results || [];
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : "Failed to load village booths";
+  }
+}
+
+async function loadMetrics(year: number) {
+  try {
+    const res = await expoEventsApi.metrics(year);
+    metrics.value = res?.metrics || null;
+  } catch {
+    metrics.value = null;
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (!selected.value) return;
+  if (tab === "metrics") loadMetrics(selected.value.year);
+});
+
+function buildEventBody(): Record<string, unknown> {
+  const b = { ...eventForm.value };
+  b.start_date = fromLocal(b.start_date as string);
+  b.end_date = fromLocal(b.end_date as string);
+  b.venue_lat = b.venue_lat ? parseFloat(b.venue_lat as string) : null;
+  b.venue_lng = b.venue_lng ? parseFloat(b.venue_lng as string) : null;
+  b.hero_images = (b.hero_images as any[])
+    .filter((h: any) => !h.isRemoved)
+    .map((h: any) => h.image);
+  return b;
+}
+
+async function saveEvent() {
+  const body = buildEventBody();
+  saving.value = true;
+  error.value = "";
+  try {
+    if (selected.value) {
+      await expoEventsApi.update(selected.value.year, body);
+      msg.value = "Event updated";
+    } else {
+      await expoEventsApi.create(body);
+      msg.value = "Event created";
+    }
+    eventModalOpen.value = false;
+    await load();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to save event";
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function approveRegistration(id: string, current: string) {
+  if (current === "APPROVED") return;
+  try {
+    await registrationsApi.update(id, { status: "APPROVED" });
+    msg.value = "Registration approved";
+    if (selected.value?.year) await loadDetail(selected.value.year);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to approve";
+  }
+}
+
+async function removeEvent(e: ExpoEvent) {
+  if (!confirm(`Delete ${e.title}?`)) return;
+  try {
+    await expoEventsApi.remove(e.year);
+    msg.value = "Event deleted";
+    await load();
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to delete event";
+  }
+}
+
+async function publish(e: ExpoEvent) {
+  try {
+    await expoEventsApi.publish(e.year);
+    msg.value = "Event published";
+    await load();
+    if (selected.value?.year === e.year) await loadDetail(e.year);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to publish";
+  }
+}
+
+async function unpublish(e: ExpoEvent) {
+  try {
+    await expoEventsApi.unpublish(e.year);
+    msg.value = "Event unpublished";
+    await load();
+    if (selected.value?.year === e.year) await loadDetail(e.year);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to unpublish";
+  }
+}
+
+async function activate(e: ExpoEvent) {
+  try {
+    await expoEventsApi.activate(e.year);
+    msg.value = "Event activated";
+    await load();
+    if (selected.value?.year === e.year) await loadDetail(e.year);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to activate";
+  }
+}
+
+const tabItems = {
+  overview: "Overview",
+  stats: "Stats",
+  focus: "Focus Areas",
+  partners: "Partners",
+  villages: "Villages",
+  speakers: "Speakers",
+  sessions: "Sessions",
+  booths: "Booth Apps",
+  registrations: "Registrations",
+  metrics: "Metrics",
+};
+
+const subLabels: Record<typeof subKind.value, string> = {
+  stat: "Stat",
+  focus: "Focus Area",
+  partner: "Partner",
+  village: "Village",
+  villageHighlights: "Village Highlights",
+  villageHighlight: "Village Highlight",
+  villageBooths: "Village Booths",
+  villageBooth: "Village Booth",
+  speaker: "Speaker",
+  session: "Session",
+  booth: "Booth Application",
+  registration: "Registration",
+};
+
+const villageHighlightsList = ref<VillageHighlight[]>([]);
+const villageBoothsList = ref<VillageBooth[]>([]);
+
+async function openSub(kind: typeof subKind.value, item?: unknown) {
+  subKind.value = kind;
+  subEditingId.value = null;
+  uploadFiles.value = {};
+  const eventId = selected.value?.id;
+
+  function setDefaults(form: Record<string, any>, edit: Record<string, any>) {
+    subForm.value = { ...form, ...edit };
+  }
+
+  if (kind === "stat") {
+    const base = { event: eventId, label: "", value: "", order: 1 };
+    if (item) {
+      const s = item as EventStat;
+      subEditingId.value = s.id;
+      setDefaults(base, { ...s });
+    } else setDefaults(base, {});
+  } else if (kind === "focus") {
+    const base = {
+      event: eventId,
+      num: "01",
+      title: "",
+      description: "",
+      accent_color: "#F97316",
+      badge_color: "#EA580C",
+      image: "",
+      order: 1,
+    };
+    if (item) {
+      const f = item as FocusArea;
+      subEditingId.value = f.id;
+      setDefaults(base, { ...f });
+    } else setDefaults(base, {});
+  } else if (kind === "partner") {
+    const base = {
+      event: eventId,
+      name: "",
+      logo: "",
+      tier: "HOST",
+      website_url: "",
+      order: 1,
+    };
+    if (item) {
+      const p = item as Partner;
+      subEditingId.value = p.id;
+      setDefaults(base, { ...p });
+    } else setDefaults(base, {});
+  } else if (kind === "village") {
+    const base = {
+      event: eventId,
+      name: "",
+      slug: "",
+      hall: "",
+      emoji: "",
+      theme_color: "#2563EB",
+      tagline: "",
+      description: "",
+      why_visit: "",
+      hero_image: "",
+      stats: "[]",
+      order: 1,
+    };
+    if (item) {
+      const v = item as Village;
+      subEditingId.value = v.slug;
+      setDefaults(base, { ...v, stats: JSON.stringify(v.stats || []) });
+    } else setDefaults(base, {});
+  } else if (kind === "speaker") {
+    const base = {
+      event: eventId,
+      name: "",
+      title: "",
+      org: "",
+      initials: "",
+      color: "#1E40AF",
+      accent_light: "#DBEAFE",
+      photo: "",
+      bio: "",
+      order: 1,
+      is_confirmed: false,
+      is_approved: false,
+    };
+    if (item) {
+      const s = item as Speaker;
+      subEditingId.value = s.id;
+      setDefaults(base, { ...s });
+    } else setDefaults(base, {});
+  } else if (kind === "session") {
+    const base = {
+      event: eventId,
+      day_number: 1,
+      start_time: "",
+      end_time: "",
+      title: "",
+      type: "KEYNOTE",
+      speaker_id: "",
+      speaker_text: "",
+      location: "",
+      order: 1,
+    };
+    if (item) {
+      const s = item as Session;
+      subEditingId.value = s.id;
+      setDefaults(base, { ...s });
+    } else setDefaults(base, {});
+  } else if (kind === "booth") {
+    const base = {
+      status: "PENDING_REVIEW",
+      assigned_booth_no: "",
+      admin_notes: "",
+    };
+    if (item) {
+      const b = item as BoothApplication;
+      subEditingId.value = b.id;
+      setDefaults(base, {
+        status: b.status,
+        assigned_booth_no: b.assigned_booth_no,
+        admin_notes: b.admin_notes,
+      });
+    } else setDefaults(base, {});
+  } else if (kind === "villageHighlights") {
+    const v = item as Village;
+    subFormParent.value = v.id;
+    await loadVillageHighlights(v.id);
+    setDefaults({}, {});
+  } else if (kind === "villageHighlight") {
+    const base = {
+      village: subFormParent.value,
+      icon: "",
+      title: "",
+      description: "",
+      order: 1,
+    };
+    if (item) {
+      const h = item as VillageHighlight;
+      subEditingId.value = h.id;
+      setDefaults(base, { ...h });
+    } else setDefaults(base, {});
+  } else if (kind === "villageBooths") {
+    const v = item as Village;
+    subFormParent.value = v.id;
+    await loadVillageBooths(v.id);
+    setDefaults({}, {});
+  } else if (kind === "villageBooth") {
+    const base = {
+      village: subFormParent.value,
+      name: "",
+      org: "",
+      booth_number: "",
+      tag: "",
+      description: "",
+      live_demo: "",
+      website_url: "",
+      logo: "",
+      is_featured: false,
+      order: 1,
+    };
+    if (item) {
+      const b = item as VillageBooth;
+      subEditingId.value = b.id;
+      setDefaults(base, { ...b });
+    } else setDefaults(base, {});
+  }
+
+  subModalOpen.value = true;
+  msg.value = "";
+}
+
+async function saveSub() {
+  if (!selected.value) return;
+  saving.value = true;
+  error.value = "";
+  try {
+    const body = { ...subForm.value };
+    for (const k of ["image", "logo", "photo", "hero_image"]) {
+      if (k in body && !body[k]) delete body[k];
+    }
+    if (subKind.value === "stat") {
+      if (subEditingId.value)
+        await eventStatsApi.update(subEditingId.value, body);
+      else await eventStatsApi.create(body);
+    } else if (subKind.value === "focus") {
+      if (subEditingId.value)
+        await focusAreasApi.update(subEditingId.value, body);
+      else await focusAreasApi.create(body);
+    } else if (subKind.value === "partner") {
+      if (subEditingId.value)
+        await partnersApi.update(subEditingId.value, body);
+      else await partnersApi.create(body);
+    } else if (subKind.value === "village") {
+      if (typeof body.stats === "string") body.stats = JSON.parse(body.stats);
+      if (subEditingId.value)
+        await villagesApi.update(subEditingId.value, body);
+      else await villagesApi.create(body);
+    } else if (subKind.value === "speaker") {
+      if (subEditingId.value)
+        await speakersApi.update(subEditingId.value, body);
+      else await speakersApi.create(body);
+    } else if (subKind.value === "session") {
+      if (subEditingId.value)
+        await sessionsApi.update(subEditingId.value, body);
+      else await sessionsApi.create(body);
+    } else if (subKind.value === "villageHighlight") {
+      if (subEditingId.value)
+        await villageHighlightsApi.update(subEditingId.value, body);
+      else await villageHighlightsApi.create(body);
+      await loadVillageHighlights(subFormParent.value);
+      subKind.value = "villageHighlights";
+      return;
+    } else if (subKind.value === "villageBooth") {
+      if (subEditingId.value)
+        await villageBoothsApi.update(subEditingId.value, body);
+      else await villageBoothsApi.create(body);
+      await loadVillageBooths(subFormParent.value);
+      subKind.value = "villageBooths";
+      return;
+    } else if (subKind.value === "booth") {
+      if (subEditingId.value)
+        await boothApplicationsApi.update(subEditingId.value, body);
+    } else if (subKind.value === "registration") {
+      if (subEditingId.value)
+        await registrationsApi.update(subEditingId.value, body);
+    }
+    subModalOpen.value = false;
+    msg.value = subEditingId.value ? "Updated" : "Created";
+    await loadDetail(selected.value.year);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to save";
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function removeSub(kind: typeof subKind.value, id: string) {
+  if (!selected.value) return;
+  if (!confirm("Delete this item?")) return;
+  try {
+    if (kind === "stat") await eventStatsApi.remove(id);
+    else if (kind === "focus") await focusAreasApi.remove(id);
+    else if (kind === "partner") await partnersApi.remove(id);
+    else if (kind === "village") await villagesApi.remove(id);
+    else if (kind === "villageHighlight") {
+      await villageHighlightsApi.remove(id);
+      if (subFormParent.value) await loadVillageHighlights(subFormParent.value);
+      return;
+    } else if (kind === "villageBooth") {
+      await villageBoothsApi.remove(id);
+      if (subFormParent.value) await loadVillageBooths(subFormParent.value);
+      return;
+    } else if (kind === "speaker") await speakersApi.remove(id);
+    else if (kind === "session")
+      await sessionsApi.update(id, { is_deleted: true });
+    else if (kind === "booth") await boothApplicationsApi.remove(id);
+    else if (kind === "registration") await registrationsApi.remove(id);
+    msg.value = "Deleted";
+    await loadDetail(selected.value.year);
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : "Failed to delete";
+  }
+}
+
+onMounted(load);
+</script>
+
+<template>
+  <main class="events-page">
+    <div v-if="view === 'list'">
+      <div class="page-header">
+        <div>
+          <h1>Expo Events</h1>
+          <p class="subtitle">Manage expo events and related data</p>
+        </div>
+        <div class="header-actions">
+          <button type="button" class="refresh-btn" @click="load">
+            <VaIcon name="refresh" size="18px" /> Refresh
+          </button>
+          <button type="button" class="new-btn" @click="openNew">
+            <VaIcon name="add" size="18px" /> New Event
+          </button>
+        </div>
+      </div>
+
+      <p v-if="error" class="banner err">{{ error }}</p>
+      <p v-if="msg" class="banner ok">{{ msg }}</p>
+
+      <div class="table-card">
+        <div v-if="loading" class="table-loading">
+          <VaProgressCircle indeterminate size="small" /> Loading…
+        </div>
+        <div v-else-if="!events.length" class="table-empty">
+          <VaIcon name="event" size="48px" color="#c5cedc" />
+          <p>No expo events found.</p>
+        </div>
+        <VaDataTable
+          v-else
+          class="events-table"
+          :items="tableRows"
+          :columns="tableColumns"
+          striped
+          hoverable
+          @row:click="onRowClick"
+        >
+          <template #cell(title)="{ rowData }">
+            <div class="cell-title">
+              <span class="event-title">{{ rowData.title }}</span>
+            </div>
+          </template>
+          <template #cell(status)="{ rowData }">
+            <span
+              class="status-pill"
+              :class="{
+                active: rowData._raw.is_active,
+                published: rowData._raw.is_published,
+              }"
+            >
+              {{ rowData.status }}
+            </span>
+          </template>
+          <template #cell(actions)="{ rowData }">
+            <div class="row-actions">
+              <button
+                type="button"
+                class="row-action"
+                title="Edit"
+                @click.stop="openEdit(rowData._raw)"
+              >
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                type="button"
+                class="row-action"
+                title="Publish"
+                @click.stop="publish(rowData._raw)"
+              >
+                <VaIcon name="publish" size="18px" />
+              </button>
+              <button
+                type="button"
+                class="row-action"
+                title="Unpublish"
+                @click.stop="unpublish(rowData._raw)"
+              >
+                <VaIcon name="unpublished" size="18px" />
+              </button>
+              <button
+                type="button"
+                class="row-action"
+                title="Activate"
+                @click.stop="activate(rowData._raw)"
+              >
+                <VaIcon name="bolt" size="18px" />
+              </button>
+              <button
+                type="button"
+                class="row-action"
+                title="Delete"
+                @click.stop="removeEvent(rowData._raw)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </div>
+          </template>
+        </VaDataTable>
+      </div>
+    </div>
+
+    <Transition name="fade">
+      <div
+        v-if="eventModalOpen"
+        class="modal-overlay"
+        @click.self="eventModalOpen = false"
+      >
+        <div class="modal-card large">
+          <div class="modal-head">
+            <h2>{{ selected ? "Edit Event" : "New Event" }}</h2>
+            <button
+              type="button"
+              class="modal-close"
+              @click="eventModalOpen = false"
+            >
+              ✕
+            </button>
+          </div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Year</label
+              ><input v-model.number="eventForm.year" type="number" />
+            </div>
+            <div class="form-field">
+              <label>Title</label
+              ><input v-model="eventForm.title" type="text" />
+            </div>
+            <div class="form-field span-2">
+              <label>Tagline</label
+              ><input v-model="eventForm.tagline" type="text" />
+            </div>
+            <div class="form-field span-2">
+              <label>Description (Markdown)</label>
+              <div class="md-toolbar">
+                <button type="button" @click.prevent="insertMd('## ')">
+                  H2
+                </button>
+                <button type="button" @click.prevent="insertMd('### ')">
+                  H3
+                </button>
+                <button type="button" @click.prevent="insertMd('**', '**')">
+                  Bold
+                </button>
+                <button type="button" @click.prevent="insertMd('*', '*')">
+                  Italic
+                </button>
+                <button type="button" @click.prevent="insertMd('- ')">
+                  List
+                </button>
+                <button type="button" @click.prevent="insertMd('1. ')">
+                  Num
+                </button>
+                <button type="button" @click.prevent="insertMd('> ')">
+                  Quote
+                </button>
+                <button type="button" @click.prevent="insertMd('[', '](url)')">
+                  Link
+                </button>
+                <button
+                  type="button"
+                  @click.prevent="showMdPreview = !showMdPreview"
+                >
+                  {{ showMdPreview ? "Edit" : "Preview" }}
+                </button>
+              </div>
+              <textarea
+                v-if="!showMdPreview"
+                id="md-editor"
+                v-model="eventForm.description"
+                rows="10"
+                class="md-editor"
+              />
+              <div
+                v-else
+                class="md-render md-preview"
+                v-html="renderMarkdown(eventForm.description || '')"
+              ></div>
+            </div>
+            <div class="form-field">
+              <label>Start</label
+              ><input v-model="eventForm.start_date" type="datetime-local" />
+            </div>
+            <div class="form-field">
+              <label>End</label
+              ><input v-model="eventForm.end_date" type="datetime-local" />
+            </div>
+            <div class="form-field">
+              <label>Venue Name</label
+              ><input v-model="eventForm.venue_name" type="text" />
+            </div>
+            <div class="form-field">
+              <label>Venue Address</label
+              ><input v-model="eventForm.venue_address" type="text" />
+            </div>
+            <div class="form-field">
+              <label>Venue Lat</label
+              ><input v-model="eventForm.venue_lat" type="number" step="any" />
+            </div>
+            <div class="form-field">
+              <label>Venue Lng</label
+              ><input v-model="eventForm.venue_lng" type="number" step="any" />
+            </div>
+            <div class="form-field span-2">
+              <label>Hero Images</label>
+              <VaFileUpload
+                v-model="uploadFiles['event_hero_images']"
+                dropzone
+                file-types="image/*"
+                upload-button-text="Add hero image"
+                drop-zone-text="Drop image here or click to add"
+              />
+              <div v-if="heroImagePreviews.length" class="hero-previews">
+                <div
+                  v-for="(img, i) in heroImagePreviews"
+                  :key="i"
+                  class="hero-preview-item"
+                >
+                  <img :src="img.url" class="form-thumb" />
+                  <button
+                    type="button"
+                    class="hero-remove-btn"
+                    @click.prevent="removeHeroImage(i)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="form-field span-2">
+              <label class="check-label"
+                ><input v-model="eventForm.is_active" type="checkbox" />
+                Active</label
+              >
+              <label class="check-label"
+                ><input v-model="eventForm.is_published" type="checkbox" />
+                Published</label
+              >
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-ghost"
+              @click="eventModalOpen = false"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn-primary"
+              :disabled="saving"
+              @click="saveEvent"
+            >
+              {{ saving ? "Saving…" : "Save" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <div v-if="view === 'detail'" class="detail-view">
+      <div class="modal-card xlarge detail-card">
+        <div class="modal-head">
+          <h2>{{ selected?.title }} ({{ selected?.year }})</h2>
+          <button type="button" class="modal-close" @click="backToList">
+            ✕
+          </button>
+        </div>
+        <div class="tabs">
+          <button
+            v-for="(label, key) in tabItems"
+            :key="key"
+            type="button"
+            class="tab"
+            :class="{ active: activeTab === key }"
+            @click="activeTab = key as any"
+          >
+            {{ label }}
+          </button>
+        </div>
+
+        <div v-if="activeTab === 'overview'" class="tab-body">
+          <dl class="detail-list">
+            <dt>Title</dt>
+            <dd>{{ selected?.title }}</dd>
+            <dt>Tagline</dt>
+            <dd>{{ selected?.tagline }}</dd>
+            <dt>Description</dt>
+            <dd
+              class="md-render"
+              v-html="renderMarkdown(selected?.description || '')"
+            ></dd>
+            <dt>Dates</dt>
+            <dd>
+              {{ formatDate(selected?.start_date || "") }} —
+              {{ formatDate(selected?.end_date || "") }}
+            </dd>
+            <dt>Venue</dt>
+            <dd>{{ selected?.venue_name }}, {{ selected?.venue_address }}</dd>
+            <dt>Active</dt>
+            <dd>{{ selected?.is_active }}</dd>
+            <dt>Published</dt>
+            <dd>{{ selected?.is_published }}</dd>
+          </dl>
+          <div v-if="selected?.hero_images?.length" class="hero-gallery">
+            <img
+              v-for="(img, idx) in selected.hero_images"
+              :key="idx"
+              :src="resolveMediaUrl(img.image)"
+              class="hero-thumb"
+            />
+          </div>
+        </div>
+
+        <div v-else-if="activeTab === 'stats'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('stat')">
+              Add Stat
+            </button>
+          </div>
+          <VaDataTable
+            :items="selected?.stats || []"
+            :columns="[
+              { key: 'label', label: 'Label' },
+              { key: 'value', label: 'Value' },
+              { key: 'order', label: 'Order' },
+              { key: 'actions', label: '' },
+            ]"
+            hoverable
+          >
+            <template #cell(actions)="{ rowData }">
+              <button class="row-action" @click="openSub('stat', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button class="row-action" @click="removeSub('stat', rowData.id)">
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
+        </div>
+
+        <div v-else-if="activeTab === 'focus'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('focus')">
+              Add Focus Area
+            </button>
+          </div>
+          <div class="focus-grid">
+            <div
+              v-for="f in selected?.focus_areas"
+              :key="f.id"
+              class="focus-card"
+            >
+              <img
+                v-if="f.image"
+                :src="resolveMediaUrl(f.image)"
+                :alt="f.title"
+              />
+              <div class="focus-meta">
+                <span class="focus-num">{{ f.num }}</span>
+                <h4>{{ f.title }}</h4>
+                <p>{{ f.description }}</p>
+                <div class="focus-actions">
+                  <button class="row-action" @click="openSub('focus', f)">
+                    <VaIcon name="edit" size="18px" />
+                  </button>
+                  <button class="row-action" @click="removeSub('focus', f.id)">
+                    <VaIcon name="delete" size="18px" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="activeTab === 'partners'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('partner')">
+              Add Partner
+            </button>
+          </div>
+          <VaDataTable
+            :items="selected?.partners || []"
+            :columns="[
+              { key: 'name', label: 'Name' },
+              { key: 'logo', label: 'Logo' },
+              { key: 'tier', label: 'Tier' },
+              { key: 'website_url', label: 'Website' },
+              { key: 'order', label: 'Order' },
+              { key: 'actions', label: '' },
+            ]"
+            hoverable
+          >
+            <template #cell(logo)="{ rowData }">
+              <img
+                v-if="rowData.logo"
+                :src="resolveMediaUrl(rowData.logo)"
+                class="row-img"
+                :alt="rowData.name"
+              />
+            </template>
+            <template #cell(actions)="{ rowData }">
+              <button class="row-action" @click="openSub('partner', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('partner', rowData.id)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
+        </div>
+
+        <div v-else-if="activeTab === 'villages'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('village')">
+              <VaIcon name="add" size="18px" /> Add Village
+            </button>
+          </div>
+          <VaDataTable
+            :items="selected?.villages || []"
+            :columns="[
+              { key: 'name', label: 'Name' },
+              { key: 'hero_image', label: 'Hero' },
+              { key: 'hall', label: 'Hall' },
+              { key: 'booths_count', label: 'Booths' },
+              { key: 'demos_count', label: 'Demos' },
+              { key: 'order', label: 'Order' },
+              { key: 'actions', label: '' },
+            ]"
+            hoverable
+          >
+            <template #cell(hero_image)="{ rowData }">
+              <img
+                v-if="rowData.hero_image"
+                :src="resolveMediaUrl(rowData.hero_image)"
+                class="row-img"
+                :alt="rowData.name"
+              />
+            </template>
+            <template #cell(actions)="{ rowData }">
+              <button
+                class="row-action"
+                title="Highlights"
+                @click="openSub('villageHighlights', rowData)"
+              >
+                <VaIcon name="star" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                title="Booths"
+                @click="openSub('villageBooths', rowData)"
+              >
+                <VaIcon name="store" size="18px" />
+              </button>
+              <button class="row-action" @click="openSub('village', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('village', rowData.slug)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
+        </div>
+
+        <div v-else-if="activeTab === 'speakers'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('speaker')">
+              <VaIcon name="add" size="18px" /> Add Speaker
+            </button>
+          </div>
+          <VaDataTable
+            :items="selected?.speakers || []"
+            :columns="[
+              { key: 'name', label: 'Name' },
+              { key: 'photo', label: 'Photo' },
+              { key: 'title', label: 'Title' },
+              { key: 'org', label: 'Org' },
+              { key: 'is_confirmed', label: 'Confirmed' },
+              { key: 'is_approved', label: 'Approved' },
+              { key: 'order', label: 'Order' },
+              { key: 'actions', label: '' },
+            ]"
+            hoverable
+          >
+            <template #cell(photo)="{ rowData }">
+              <img
+                v-if="rowData.photo"
+                :src="resolveMediaUrl(rowData.photo)"
+                class="row-img"
+                :alt="rowData.name"
+              />
+            </template>
+            <template #cell(actions)="{ rowData }">
+              <button class="row-action" @click="openSub('speaker', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('speaker', rowData.id)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
+        </div>
+
+        <div v-else-if="activeTab === 'sessions'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('session')">
+              <VaIcon name="add" size="18px" /> Add Session
+            </button>
+          </div>
+          <VaDataTable
+            :items="selected?.sessions || []"
+            :columns="[
+              { key: 'title', label: 'Title' },
+              { key: 'type', label: 'Type' },
+              { key: 'start_time', label: 'Start' },
+              { key: 'end_time', label: 'End' },
+              { key: 'location', label: 'Location' },
+              { key: 'speaker', label: 'Speaker' },
+              { key: 'order', label: 'Order' },
+              { key: 'actions', label: '' },
+            ]"
+            hoverable
+          >
+            <template #cell(speaker)="{ rowData }">
+              {{ rowData.speaker ? rowData.speaker.name : "-" }}
+            </template>
+            <template #cell(actions)="{ rowData }">
+              <button class="row-action" @click="openSub('session', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('session', rowData.id)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
+        </div>
+
+        <div v-else-if="activeTab === 'booths'" class="tab-body">
+          <div class="tab-toolbar">
+            <button type="button" class="new-btn" @click="openSub('booth')">
+              <VaIcon name="add" size="18px" /> Add Booth App
+            </button>
+          </div>
+          <VaDataTable
+            :items="selected?.booth_applications || []"
+            :columns="[
+              { key: 'reference_no', label: 'Ref' },
+              { key: 'company_name', label: 'Company' },
+              { key: 'booth_package', label: 'Package' },
+              { key: 'status', label: 'Status' },
+              { key: 'assigned_booth_no', label: 'Booth No' },
+              { key: 'actions', label: '' },
+            ]"
+            hoverable
+          >
+            <template #cell(actions)="{ rowData }">
+              <button class="row-action" @click="openSub('booth', rowData)">
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('booth', rowData.id)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
+        </div>
+
+        <div v-else-if="activeTab === 'registrations'" class="tab-body">
+          <VaDataTable
+            :items="selected?.registrations || []"
+            :columns="[
+              { key: 'reference_no', label: 'Ref' },
+              { key: 'first_name', label: 'First' },
+              { key: 'last_name', label: 'Last' },
+              { key: 'type', label: 'Type' },
+              { key: 'status', label: 'Status' },
+              { key: 'badge_code', label: 'Badge' },
+              { key: 'actions', label: '' },
+            ]"
+            hoverable
+          >
+            <template #cell(actions)="{ rowData }">
+              <button
+                v-if="rowData.status !== 'APPROVED'"
+                class="row-action"
+                title="Approve"
+                @click="approveRegistration(rowData.id, rowData.status)"
+              >
+                <VaIcon name="check" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="openSub('registration', rowData)"
+              >
+                <VaIcon name="edit" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                @click="removeSub('registration', rowData.id)"
+              >
+                <VaIcon name="delete" size="18px" />
+              </button>
+            </template>
+          </VaDataTable>
+        </div>
+
+        <div v-else-if="activeTab === 'metrics'" class="tab-body">
+          <div v-if="!metrics" class="table-empty">No metrics loaded.</div>
+          <div v-else class="metrics-grid">
+            <div class="stat-card">
+              <span class="stat-value">{{ metrics.totalRegistrations }}</span
+              ><span class="stat-label">Total Registrations</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">{{ metrics.breakdown.guests }}</span
+              ><span class="stat-label">Guests</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">{{ metrics.breakdown.booths }}</span
+              ><span class="stat-label">Booths</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">{{ metrics.breakdown.speakers }}</span
+              ><span class="stat-label">Speakers</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">{{ metrics.breakdown.volunteers }}</span
+              ><span class="stat-label">Volunteers</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">{{
+                metrics.pendingBoothApplications
+              }}</span
+              ><span class="stat-label">Pending Booth Apps</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <Transition name="fade">
+      <div
+        v-if="subModalOpen"
+        class="modal-overlay"
+        @click.self="subModalOpen = false"
+      >
+        <div
+          class="modal-card"
+          :class="{
+            xlarge:
+              subKind === 'villageHighlights' || subKind === 'villageBooths',
+          }"
+        >
+          <div class="modal-head">
+            <h2>
+              {{
+                subKind === "villageHighlights"
+                  ? "Village Highlights"
+                  : subKind === "villageBooths"
+                    ? "Village Booths"
+                    : `${subEditingId ? "Edit" : "Add"} ${subLabels[subKind]}`
+              }}
+            </h2>
+            <button
+              type="button"
+              class="modal-close"
+              @click="subModalOpen = false"
+            >
+              ✕
+            </button>
+          </div>
+          <div class="form-grid">
+            <template v-if="subKind === 'stat'">
+              <div class="form-field span-2">
+                <label>Label</label
+                ><input v-model="subForm.label" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Value</label
+                ><input v-model="subForm.value" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Order</label
+                ><input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'focus'">
+              <div class="form-field">
+                <label>Num</label><input v-model="subForm.num" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Title</label
+                ><input v-model="subForm.title" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Description</label
+                ><textarea v-model="subForm.description" rows="3" />
+              </div>
+              <div class="form-field">
+                <label>Accent Color</label
+                ><input v-model="subForm.accent_color" type="color" />
+              </div>
+              <div class="form-field">
+                <label>Badge Color</label
+                ><input v-model="subForm.badge_color" type="color" />
+              </div>
+              <div class="form-field span-2">
+                <label>Image</label>
+                <img
+                  v-if="subForm.image"
+                  :src="resolveMediaUrl(subForm.image)"
+                  class="form-thumb"
+                />
+                <VaFileUpload
+                  v-model="uploadFiles['sub_image']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload image"
+                  drop-zone-text="Drop image here or click to upload"
+                />
+              </div>
+              <div class="form-field">
+                <label>Order</label
+                ><input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'village'">
+              <div class="form-field span-2">
+                <label>Name</label>
+                <input v-model="subForm.name" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Slug</label>
+                <input v-model="subForm.slug" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Hall</label>
+                <input v-model="subForm.hall" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Emoji</label>
+                <input v-model="subForm.emoji" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Theme Color</label>
+                <input v-model="subForm.theme_color" type="color" />
+              </div>
+              <div class="form-field span-2">
+                <label>Tagline</label>
+                <input v-model="subForm.tagline" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Description</label>
+                <textarea v-model="subForm.description" rows="3" />
+              </div>
+              <div class="form-field span-2">
+                <label>Why Visit</label>
+                <textarea v-model="subForm.why_visit" rows="3" />
+              </div>
+              <div class="form-field span-2">
+                <label>Hero Image</label>
+                <img
+                  v-if="subForm.hero_image"
+                  :src="resolveMediaUrl(subForm.hero_image)"
+                  class="form-thumb"
+                />
+                <VaFileUpload
+                  v-model="uploadFiles['sub_hero_image']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload hero image"
+                  drop-zone-text="Drop image here or click to upload"
+                />
+              </div>
+              <div class="form-field span-2">
+                <label>Stats (JSON)</label>
+                <textarea v-model="subForm.stats" rows="3" />
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'speaker'">
+              <div class="form-field span-2">
+                <label>Name</label>
+                <input v-model="subForm.name" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Title</label>
+                <input v-model="subForm.title" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Org</label>
+                <input v-model="subForm.org" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Initials</label>
+                <input v-model="subForm.initials" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Color</label>
+                <input v-model="subForm.color" type="color" />
+              </div>
+              <div class="form-field">
+                <label>Accent Light</label>
+                <input v-model="subForm.accent_light" type="color" />
+              </div>
+              <div class="form-field span-2">
+                <label>Photo</label>
+                <img
+                  v-if="subForm.photo"
+                  :src="resolveMediaUrl(subForm.photo)"
+                  class="form-thumb"
+                />
+                <VaFileUpload
+                  v-model="uploadFiles['sub_photo']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload photo"
+                  drop-zone-text="Drop photo here or click to upload"
+                />
+              </div>
+              <div class="form-field span-2">
+                <label>Bio</label>
+                <textarea v-model="subForm.bio" rows="3" />
+              </div>
+              <div class="form-field">
+                <label>Confirmed</label>
+                <input v-model="subForm.is_confirmed" type="checkbox" />
+              </div>
+              <div class="form-field">
+                <label>Approved</label>
+                <input v-model="subForm.is_approved" type="checkbox" />
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'session'">
+              <div class="form-field">
+                <label>Day</label>
+                <input v-model.number="subForm.day_number" type="number" />
+              </div>
+              <div class="form-field">
+                <label>Start Time</label>
+                <input v-model="subForm.start_time" type="text" />
+              </div>
+              <div class="form-field">
+                <label>End Time</label>
+                <input v-model="subForm.end_time" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Title</label>
+                <input v-model="subForm.title" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Type</label>
+                <select v-model="subForm.type">
+                  <option value="KEYNOTE">KEYNOTE</option>
+                  <option value="PANEL">PANEL</option>
+                  <option value="WORKSHOP">WORKSHOP</option>
+                  <option value="BREAK">BREAK</option>
+                  <option value="NETWORKING">NETWORKING</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Speaker ID</label>
+                <input v-model="subForm.speaker_id" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Speaker Text</label>
+                <input v-model="subForm.speaker_text" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Location</label>
+                <input v-model="subForm.location" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'booth'">
+              <div class="form-field">
+                <label>Status</label>
+                <select v-model="subForm.status">
+                  <option value="PENDING_REVIEW">PENDING_REVIEW</option>
+                  <option value="APPROVED">APPROVED</option>
+                  <option value="REJECTED">REJECTED</option>
+                  <option value="ASSIGNED">ASSIGNED</option>
+                  <option value="WAITLIST">WAITLIST</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Assigned Booth No</label>
+                <input v-model="subForm.assigned_booth_no" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Admin Notes</label>
+                <textarea v-model="subForm.admin_notes" rows="3" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'registration'">
+              <div class="form-field">
+                <label>Status</label>
+                <select v-model="subForm.status">
+                  <option value="CONFIRMED">CONFIRMED</option>
+                  <option value="PENDING">PENDING</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
+              </div>
+            </template>
+            <template v-else-if="subKind === 'villageHighlights'">
+              <div class="form-field span-2">
+                <button
+                  type="button"
+                  class="new-btn"
+                  @click="openSub('villageHighlight')"
+                >
+                  <VaIcon name="add" size="18px" /> Add Highlight
+                </button>
+              </div>
+              <div
+                v-for="h in villageHighlightsList"
+                :key="h.id"
+                class="highlight-row"
+              >
+                <span class="hl-icon">
+                  <VaIcon v-if="h.icon" :name="h.icon" size="20px" />
+                  <span v-else>—</span>
+                </span>
+                <span class="hl-title">{{ h.title }}</span>
+                <span class="hl-desc">{{ h.description }}</span>
+                <span class="hl-order">{{ h.order }}</span>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Edit"
+                  @click="openSub('villageHighlight', h)"
+                >
+                  <VaIcon name="edit" size="16px" />
+                </button>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Delete"
+                  @click="removeSub('villageHighlight', h.id)"
+                >
+                  <VaIcon name="delete" size="16px" />
+                </button>
+              </div>
+            </template>
+            <template v-else-if="subKind === 'villageHighlight'">
+              <div class="form-field span-2">
+                <label>Selected Icon</label>
+                <div class="icon-value">
+                  <VaIcon
+                    v-if="subForm.icon"
+                    :name="subForm.icon"
+                    size="24px"
+                  />
+                  <span v-else>—</span>
+                  <span class="icon-name">{{ subForm.icon || "None" }}</span>
+                </div>
+                <label class="icon-label">Choose an icon</label>
+                <div class="icon-picker">
+                  <button
+                    v-for="icon in iconOptions"
+                    :key="icon"
+                    type="button"
+                    class="icon-option"
+                    :class="{ selected: subForm.icon === icon }"
+                    :title="icon"
+                    @click="subForm.icon = icon"
+                  >
+                    <VaIcon :name="icon" size="20px" />
+                  </button>
+                </div>
+              </div>
+              <div class="form-field span-2">
+                <label>Title</label>
+                <input v-model="subForm.title" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Description</label>
+                <textarea v-model="subForm.description" rows="3" />
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'villageBooths'">
+              <div class="form-field span-2">
+                <button
+                  type="button"
+                  class="new-btn"
+                  @click="openSub('villageBooth')"
+                >
+                  <VaIcon name="add" size="18px" /> Add Booth
+                </button>
+              </div>
+              <div v-for="b in villageBoothsList" :key="b.id" class="booth-row">
+                <img
+                  v-if="b.logo"
+                  :src="resolveMediaUrl(b.logo)"
+                  class="booth-thumb"
+                  :alt="b.name"
+                />
+                <span v-else class="booth-thumb no-img">—</span>
+                <span class="booth-name">{{ b.name }}</span>
+                <span class="booth-org">{{ b.org }}</span>
+                <span class="booth-number">{{ b.booth_number }}</span>
+                <span class="booth-tag">{{ b.tag }}</span>
+                <span class="booth-featured">{{
+                  b.is_featured ? "Yes" : "No"
+                }}</span>
+                <span class="booth-order">{{ b.order }}</span>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Edit"
+                  @click="openSub('villageBooth', b)"
+                >
+                  <VaIcon name="edit" size="16px" />
+                </button>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Delete"
+                  @click="removeSub('villageBooth', b.id)"
+                >
+                  <VaIcon name="delete" size="16px" />
+                </button>
+              </div>
+            </template>
+            <template v-else-if="subKind === 'villageBooth'">
+              <div class="form-field span-2">
+                <label>Name</label>
+                <input v-model="subForm.name" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Organization</label>
+                <input v-model="subForm.org" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Booth Number</label>
+                <input v-model="subForm.booth_number" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Tag</label>
+                <input v-model="subForm.tag" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Description</label>
+                <textarea v-model="subForm.description" rows="3" />
+              </div>
+              <div class="form-field span-2">
+                <label>Live Demo</label>
+                <input v-model="subForm.live_demo" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Website URL</label>
+                <input v-model="subForm.website_url" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Logo</label>
+                <img
+                  v-if="subForm.logo"
+                  :src="resolveMediaUrl(subForm.logo)"
+                  class="form-thumb"
+                />
+                <VaFileUpload
+                  v-model="uploadFiles['sub_logo']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload logo"
+                  drop-zone-text="Drop logo here or click to upload"
+                />
+              </div>
+              <div class="form-field">
+                <label class="inline-check">
+                  <input v-model="subForm.is_featured" type="checkbox" />
+                  Featured
+                </label>
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else>
+              <div class="form-field span-2">
+                <label>Name</label><input v-model="subForm.name" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Logo</label>
+                <img
+                  v-if="subForm.logo"
+                  :src="resolveMediaUrl(subForm.logo)"
+                  class="form-thumb"
+                />
+                <VaFileUpload
+                  v-model="uploadFiles['sub_logo']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload logo"
+                  drop-zone-text="Drop logo here or click to upload"
+                />
+              </div>
+              <div class="form-field">
+                <label>Tier</label>
+                <select v-model="subForm.tier">
+                  <option value="HOST">HOST</option>
+                  <option value="LEAD_PARTNER">LEAD_PARTNER</option>
+                  <option value="PARTNER">PARTNER</option>
+                  <option value="MEDIA">MEDIA</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Website URL</label
+                ><input v-model="subForm.website_url" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Order</label
+                ><input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              class="btn-ghost"
+              @click="subModalOpen = false"
+            >
+              {{
+                subKind === "villageHighlights" || subKind === "villageBooths"
+                  ? "Close"
+                  : "Cancel"
+              }}
+            </button>
+            <button
+              v-if="
+                subKind !== 'villageHighlights' && subKind !== 'villageBooths'
+              "
+              type="button"
+              class="btn-primary"
+              :disabled="saving"
+              @click="saveSub"
+            >
+              {{ saving ? "Saving…" : "Save" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </main>
+</template>
+
+<style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+.page-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0a1f44;
+}
+.subtitle {
+  margin: 0.15rem 0 0;
+  color: #5b6b82;
+  font-size: 0.9rem;
+}
+.header-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.refresh-btn,
+.new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 0;
+  cursor: pointer;
+}
+.refresh-btn {
+  background: #f2f5f9;
+  color: #0a1f44;
+}
+.new-btn {
+  background: #ff6a00;
+  color: #fff;
+}
+.banner {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+.banner.err {
+  background: #fef3f2;
+  color: #b42318;
+}
+.banner.ok {
+  background: #ecfdf3;
+  color: #0a7a3d;
+}
+.table-card {
+  background: #fff;
+  border: 1px solid #e6ebf2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.table-loading,
+.table-empty {
+  display: grid;
+  place-content: center;
+  min-height: 220px;
+  text-align: center;
+  color: #5b6b82;
+  gap: 0.75rem;
+}
+.cell-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.event-title {
+  font-weight: 600;
+  color: #0a1f44;
+}
+.status-pill {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  background: #f2f5f9;
+  color: #5b6b82;
+}
+.status-pill.published {
+  background: #ecfdf3;
+  color: #0a7a3d;
+}
+.status-pill.active {
+  background: #fff7ed;
+  color: #9a3412;
+}
+.row-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+.row-action {
+  background: transparent;
+  border: 0;
+  color: #8b98a9;
+  cursor: pointer;
+}
+.row-action:hover {
+  color: #0a1f44;
+}
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 18, 44, 0.5);
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+.modal-card {
+  background: #fff;
+  border-radius: 14px;
+  width: min(560px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(10, 31, 68, 0.24);
+}
+.modal-card.large {
+  width: min(720px, 100%);
+}
+.modal-card.xlarge {
+  width: min(960px, 100%);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid #eef1f6;
+}
+.modal-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #0a1f44;
+}
+.modal-close {
+  border: 0;
+  background: #f2f5f9;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #5b6b82;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  padding: 1.25rem;
+}
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.form-field.span-2 {
+  grid-column: span 2;
+}
+.form-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5b6b82;
+}
+.form-field input,
+.form-field select,
+.form-field textarea {
+  border: 1px solid #e6ebf2;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  outline: none;
+}
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: #ff6a00;
+}
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1rem;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid #eef1f6;
+}
+.btn-primary,
+.btn-ghost {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 700;
+  border: 0;
+  cursor: pointer;
+}
+.btn-primary {
+  background: #ff6a00;
+  color: #fff;
+}
+.btn-ghost {
+  background: #f2f5f9;
+  color: #0a1f44;
+}
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.75rem 1.25rem 0;
+  border-bottom: 1px solid #eef1f6;
+  overflow-x: auto;
+}
+.tab {
+  background: transparent;
+  border: 0;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  color: #5b6b82;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.tab.active {
+  color: #0a1f44;
+  border-bottom-color: #ff6a00;
+}
+.tab-body {
+  padding: 1.25rem;
+}
+.tab-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+.detail-list {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 0.5rem 1rem;
+}
+.detail-list dt {
+  color: #5b6b82;
+  font-weight: 600;
+}
+.detail-list dd {
+  margin: 0;
+  color: #0a1f44;
+}
+.md-render {
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+.md-render h1,
+.md-render h2,
+.md-render h3 {
+  margin: 0.8em 0 0.4em;
+  color: #0a1f44;
+}
+.md-render h2 {
+  font-size: 1.3rem;
+  border-bottom: 1px solid #e6ebf2;
+  padding-bottom: 0.3rem;
+}
+.md-render h3 {
+  font-size: 1.1rem;
+}
+.md-render ul,
+.md-render ol {
+  padding-left: 1.5rem;
+  margin: 0.4em 0;
+}
+.md-render li {
+  margin: 0.2em 0;
+}
+.md-render p {
+  margin: 0.5em 0;
+}
+.md-render a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.md-render code {
+  background: #f0f4f8;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+.md-render blockquote {
+  border-left: 3px solid #cbd5e1;
+  padding-left: 1rem;
+  margin: 0.5em 0;
+  color: #64748b;
+}
+.md-render hr {
+  border: none;
+  border-top: 1px solid #e6ebf2;
+  margin: 1em 0;
+}
+.md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+.md-toolbar button {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  border: 1px solid #d0d9e6;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+}
+.md-toolbar button:hover {
+  background: #e2e8f0;
+}
+.md-editor {
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.875rem;
+  padding: 0.6rem;
+  border: 1px solid #d0d9e6;
+  border-radius: 6px;
+  resize: vertical;
+}
+.md-preview {
+  min-height: 200px;
+  padding: 0.8rem;
+  border: 1px solid #d0d9e6;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+.detail-list dd.md-render {
+  grid-column: 2;
+}
+.focus-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.highlight-row {
+  display: grid;
+  grid-template-columns: 70px 1.5fr 3fr 60px 36px 36px;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e6ebf2;
+}
+.form-grid .highlight-row {
+  grid-column: span 2;
+}
+.highlight-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.highlight-row .hl-desc {
+  white-space: normal;
+  line-height: 1.4;
+}
+.highlight-row input {
+  padding: 0.4rem;
+  border: 1px solid #d0d9e6;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.highlight-row .row-action {
+  width: 28px;
+  height: 28px;
+}
+.booth-row {
+  display: grid;
+  grid-template-columns: 48px 1.5fr 1.2fr 100px 100px 70px 60px 36px 36px;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e6ebf2;
+}
+.form-grid .booth-row {
+  grid-column: span 2;
+}
+.booth-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.booth-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #5b6b82;
+}
+.booth-row .row-action {
+  width: 28px;
+  height: 28px;
+}
+.inline-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+.icon-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #e6ebf2;
+  border-radius: 6px;
+  min-height: 36px;
+}
+.icon-name {
+  font-size: 0.85rem;
+  color: #5b6b82;
+}
+.icon-label {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #5b6b82;
+}
+.icon-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 0.4rem;
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 0.4rem;
+  border: 1px solid #e6ebf2;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+.icon-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #d0d9e6;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+.icon-option.selected,
+.icon-option:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+.focus-card {
+  border: 1px solid #e6ebf2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.focus-card img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+}
+.focus-meta {
+  padding: 0.75rem;
+}
+.focus-num {
+  color: #ff6a00;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.focus-meta h4 {
+  margin: 0.25rem 0;
+  color: #0a1f44;
+}
+.focus-meta p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #5b6b82;
+}
+.focus-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+.stat-card {
+  background: #fff;
+  border: 1px solid #e6ebf2;
+  border-top: 3px solid #ff6a00;
+  border-radius: 12px;
+  padding: 1rem;
+}
+.stat-value {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0a1f44;
+}
+.stat-label {
+  font-size: 0.8rem;
+  color: #5b6b82;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .form-field.span-2 {
+    grid-column: span 1;
+  }
+  .page-header {
+    flex-direction: column;
+  }
+}
+.detail-view {
+  background: #fff;
+  border: 1px solid #e6ebf2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.detail-card {
+  width: 100%;
+  max-height: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+.hero-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.hero-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}
+.hero-preview-item {
+  position: relative;
+}
+.hero-remove-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #b42318;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.hero-remove-btn:hover {
+  background: #d32f2f;
+}
+.form-thumb,
+.hero-thumb {
+  width: 80px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e6ebf2;
+}
+.row-img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e6ebf2;
+}
+</style>

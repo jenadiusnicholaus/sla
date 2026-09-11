@@ -8,6 +8,28 @@ const routes = [
     component: () => import('@/pages/HomePage.vue'),
   },
   {
+    path: '/connect',
+    component: () => import('@/pages/connect/ConnectLayout.vue'),
+    meta: { public: true },
+    children: [
+      {
+        path: '',
+        name: 'connect-hub',
+        component: () => import('@/pages/connect/ConnectHubPage.vue'),
+      },
+      {
+        path: 'social',
+        name: 'connect-social',
+        component: () => import('@/pages/connect/ConnectSocialPage.vue'),
+      },
+      {
+        path: 'contact',
+        name: 'connect-contact',
+        component: () => import('@/pages/connect/ConnectContactPage.vue'),
+      },
+    ],
+  },
+  {
     path: '/qr/:code',
     name: 'smart-hub',
     component: () => import('@/pages/SmartHubPage.vue'),

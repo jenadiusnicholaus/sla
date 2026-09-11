@@ -11,11 +11,15 @@ onMounted(() => {
   load()
 })
 
-const phones = computed(() => {
-  const primary = (settings.value?.phone || '+255 68 203 0111').trim()
-  const extras = ['+255 68 937 7952']
-  return [primary, ...extras.filter((p) => p !== primary)]
-})
+const phones = ['+255 68 203 0111', '+255 68 937 7952']
+
+function telHref(phone) {
+  return `tel:${phone.replace(/\s/g, '')}`
+}
+
+function waHref(phone) {
+  return `https://wa.me/${phone.replace(/[^\d]/g, '')}`
+}
 
 const emails = computed(() => {
   const primary = (settings.value?.email || 'info@streetlabsafrica.org').trim()
@@ -27,7 +31,6 @@ const address = computed(
   () => settings.value?.address || 'Morocco Square, Kinondoni, Dar Es Salaam, Tanzania.',
 )
 
-const whatsappNumber = computed(() => phones.value[0].replace(/[^\d+]/g, ''))
 const mapsUrl = computed(
   () => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address.value)}`,
 )
@@ -95,8 +98,10 @@ async function submit() {
             </svg>
           </div>
           <h2>Phone</h2>
-          <p v-for="p in phones" :key="p">{{ p }}</p>
-          <a class="btn green" :href="`tel:${phones[0].replace(/\s/g, '')}`">Call now</a>
+          <div v-for="p in phones" :key="`tel-${p}`" class="line-action">
+            <p>{{ p }}</p>
+            <a class="btn green" :href="telHref(p)">Call</a>
+          </div>
         </article>
 
         <article class="info-card green connect-rise d2">
@@ -106,15 +111,17 @@ async function submit() {
             </svg>
           </div>
           <h2>WhatsApp</h2>
-          <p>{{ phones[0] }}</p>
-          <a
-            class="btn green"
-            :href="`https://wa.me/${whatsappNumber.replace('+', '')}`"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Chat on WhatsApp
-          </a>
+          <div v-for="p in phones" :key="`wa-${p}`" class="line-action">
+            <p>{{ p }}</p>
+            <a
+              class="btn green"
+              :href="waHref(p)"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Chat
+            </a>
+          </div>
         </article>
 
         <article class="info-card navy connect-rise d3">
@@ -306,6 +313,20 @@ async function submit() {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.45;
+}
+
+.line-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.line-action .btn {
+  margin-top: 0;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
 }
 
 .btn {

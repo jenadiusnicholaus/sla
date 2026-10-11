@@ -39,7 +39,21 @@ async function loadHub(pwd = '') {
     hub.value = data.hub
     requiresPassword.value = false
     if (data.mode === 'redirect' && data.destination && !data.hub?.links?.length) {
-      window.location.href = data.destination
+      const dest = data.destination
+      if (dest.startsWith('/')) {
+        router.replace(dest)
+        return
+      }
+      try {
+        const url = new URL(dest, window.location.origin)
+        if (url.origin === window.location.origin) {
+          router.replace(`${url.pathname}${url.search}${url.hash}`)
+          return
+        }
+      } catch {
+        /* fall through */
+      }
+      window.location.href = dest
     }
   } catch (e) {
     if (e.status === 403 && e.data?.requires_password) {

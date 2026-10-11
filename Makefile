@@ -1,14 +1,18 @@
-.PHONY: help build up up-build down logs logs-follow logs-all restart clean deploy docker-deploy git-pull
+.PHONY: help run build up up-build down logs logs-follow logs-all restart clean deploy docker-deploy git-pull status
 
 # Auto-detect docker compose command (v2 plugin vs v1 standalone)
 DOCKER_COMPOSE := $(shell if docker compose version >/dev/null 2>&1; then echo "docker compose"; else echo "docker-compose"; fi)
 CONTAINER_NAME := sla-frontend
 PORT := 9202
+DEV_PORT := 5173
 
 help: ## Show this help message
 	@echo "Usage: make [target]"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
+
+run: ## Start Vite dev server locally
+	npm run dev -- --host 0.0.0.0 --port $(DEV_PORT)
 
 build: ## Build the Docker image
 	$(DOCKER_COMPOSE) build --no-cache

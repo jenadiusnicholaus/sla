@@ -1,0 +1,145 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+
+.connect-root {
+  --navy: #0a1f44;
+  --green: #0a7a3d;
+  --orange: #ff6a00;
+  --ink: #12233f;
+  --muted: #5a6a85;
+  --paper: #f3f7fb;
+  --card: #ffffff;
+  font-family: "Poppins", system-ui, sans-serif;
+  color: var(--ink);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  background: #f3f7fb;
+}
+
+.connect-root * {
+  box-sizing: border-box;
+}
+
+.connect-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    url("/images/connect-bg.svg") center top / cover no-repeat;
+  opacity: 1;
+}
+
+/* Side dotted grids kept light in case bg is sparse on wide screens */
+.connect-dots {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(circle, rgba(10, 31, 68, 0.18) 1.35px, transparent 1.45px);
+  background-size: 14px 14px;
+  background-repeat: repeat;
+  display: none;
+}
+
+.connect-dots-left {
+  top: 7.5rem;
+  left: clamp(0.75rem, 3vw, 2.5rem);
+  width: 56px;
+  height: 140px;
+  opacity: 0.55;
+}
+
+.connect-dots-left-mid {
+  top: 42%;
+  left: clamp(0.5rem, 2.5vw, 2rem);
+  width: 42px;
+  height: 120px;
+  opacity: 0.35;
+}
+
+.connect-dots-right {
+  top: 28%;
+  right: clamp(0.75rem, 3vw, 2.75rem);
+  width: 84px;
+  height: 154px;
+  opacity: 0.5;
+}
+
+.connect-waves {
+  display: none;
+}
+
+.connect-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1100px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 1.25rem 0 3rem;
+}
+
+.connect-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  background: transparent;
+  color: var(--navy);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0.35rem 0.15rem;
+  margin-bottom: 1rem;
+  text-decoration: none;
+}
+
+.connect-back:hover {
+  color: var(--orange);
+}
+
+.connect-bars {
+  display: flex;
+  gap: 0.35rem;
+  margin: 1rem 0 0;
+}
+
+.connect-bars span {
+  width: 28px;
+  height: 4px;
+  border-radius: 999px;
+}
+
+.connect-bars .navy { background: var(--navy); }
+.connect-bars .orange { background: var(--orange); }
+.connect-bars .green { background: var(--green); }
+
+.connect-bars.center {
+  justify-content: center;
+}
+
+@keyframes connect-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.connect-rise {
+  animation: connect-rise 0.55s ease-out both;
+}
+
+.connect-rise.d1 { animation-delay: 0.08s; }
+.connect-rise.d2 { animation-delay: 0.16s; }
+.connect-rise.d3 { animation-delay: 0.24s; }
+.connect-rise.d4 { animation-delay: 0.32s; }
+.connect-rise.d5 { animation-delay: 0.4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .connect-rise {
+    animation: none;
+  }
+}

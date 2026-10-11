@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { DEFAULT_LANDING_NAV, sortNavByLandingOrder } from "@/lib/landingNav";
-
-interface NavLink {
-  label: string;
-  href: string;
-}
+import {
+  DEFAULT_LANDING_NAV,
+  sortNavByLandingOrder,
+  type NavLink,
+} from "@/lib/landingNav";
 
 interface Announcement {
   message?: string;
@@ -45,9 +44,22 @@ const isMenuOpen = ref(false);
 const isScrolled = ref(false);
 const announcementVisible = ref(true);
 
-const navLinks = computed(() =>
-  sortNavByLandingOrder(props.nav?.length ? props.nav : DEFAULT_NAV),
-);
+const STATIC_EXTRA_LINKS: NavLink[] = [
+  { label: "Blog", href: "/blog" },
+  { label: "Podcast", href: "/podcast" },
+];
+
+const navLinks = computed(() => {
+  const base: NavLink[] = props.nav?.length ? props.nav : DEFAULT_NAV;
+  // Always ensure Blog & Podcast are present
+  const merged = [...base];
+  for (const extra of STATIC_EXTRA_LINKS) {
+    if (!merged.some((l) => l.href === extra.href)) {
+      merged.push(extra);
+    }
+  }
+  return sortNavByLandingOrder(merged);
+});
 const logoSrc = computed(
   () =>
     props.settings?.logo || "/images/STREET_DIGITAL_LABS_AFRICA_WITH_WORD.png",

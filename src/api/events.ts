@@ -332,6 +332,23 @@ export const expoEventsApi = {
     ),
 };
 
+export const eventHeroImagesApi = {
+  list: (params?: { event?: string }) =>
+    api<Paginated<HeroImage>>(
+      `/admin/event-hero-images/${buildListQuery(params)}`,
+    ),
+  get: (id: string) => api<HeroImage>(`/admin/event-hero-images/${id}/`),
+  create: (body: Record<string, unknown>) =>
+    api<HeroImage>("/admin/event-hero-images/", { method: "POST", body }),
+  update: (id: string, body: Record<string, unknown>) =>
+    api<HeroImage>(`/admin/event-hero-images/${id}/`, {
+      method: "PATCH",
+      body,
+    }),
+  remove: (id: string) =>
+    api(`/admin/event-hero-images/${id}/`, { method: "DELETE" }),
+};
+
 export const eventStatsApi = {
   list: (params?: { event?: string }) =>
     api<Paginated<EventStat>>(`/admin/event-stats/${buildListQuery(params)}`),

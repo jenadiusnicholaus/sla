@@ -26,6 +26,30 @@ const routes = [
     meta: { public: true },
   },
   {
+    path: "/blog",
+    name: "blog",
+    component: () => import("@/pages/BlogPage.vue"),
+    meta: { public: true },
+  },
+  {
+    path: "/blog/:slug",
+    name: "blog-detail",
+    component: () => import("@/pages/PostDetailPage.vue"),
+    meta: { public: true },
+  },
+  {
+    path: "/podcast",
+    name: "podcast",
+    component: () => import("@/pages/PodcastPage.vue"),
+    meta: { public: true },
+  },
+  {
+    path: "/podcast/:slug",
+    name: "podcast-detail",
+    component: () => import("@/pages/PostDetailPage.vue"),
+    meta: { public: true },
+  },
+  {
     path: "/backoffice/login",
     name: "backoffice-login",
     component: () => import("@/pages/backoffice/LoginPage.vue"),
@@ -90,6 +114,11 @@ const routes = [
         path: "events",
         name: "backoffice-events",
         component: () => import("@/pages/backoffice/EventsPage.vue"),
+      },
+      {
+        path: "posts",
+        name: "backoffice-posts",
+        component: () => import("@/pages/backoffice/PostsPage.vue"),
       },
     ],
   },

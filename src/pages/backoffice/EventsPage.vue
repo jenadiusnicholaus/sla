@@ -3,11 +3,13 @@ import { ref, computed, onMounted, watch } from "vue";
 import {
   expoEventsApi,
   eventStatsApi,
+  eventHeroImagesApi,
   focusAreasApi,
   partnersApi,
   villagesApi,
   villageHighlightsApi,
   villageBoothsApi,
+  villageSchedulesApi,
   speakersApi,
   sessionsApi,
   boothApplicationsApi,
@@ -16,11 +18,13 @@ import {
 import type {
   ExpoEvent,
   EventStat,
+  HeroImage,
   FocusArea,
   Partner,
   Village,
   VillageHighlight,
   VillageBooth,
+  VillageSchedule,
   Speaker,
   Session,
   BoothApplication,
@@ -85,7 +89,6 @@ const eventForm = ref<Record<string, any>>({
   venue_address: "",
   venue_lat: "",
   venue_lng: "",
-  hero_images: [] as any[],
   is_active: false,
   is_published: false,
 });
@@ -100,6 +103,10 @@ const subKind = ref<
   | "villageHighlight"
   | "villageBooths"
   | "villageBooth"
+  | "villageSchedules"
+  | "villageSchedule"
+  | "eventHeroImages"
+  | "eventHeroImage"
   | "speaker"
   | "session"
   | "booth"
@@ -184,24 +191,6 @@ const tableRows = computed(() =>
   })),
 );
 
-interface HeroPreview {
-  id?: string;
-  image: string;
-  order?: number;
-  isNew?: boolean;
-  isRemoved?: boolean;
-  url: string;
-}
-
-const heroImagePreviews = computed<HeroPreview[]>(() =>
-  (eventForm.value.hero_images || [])
-    .filter((h: any) => !h.isRemoved)
-    .map((h: any) => ({
-      ...h,
-      url: resolveMediaUrl(h.image),
-    })),
-);
-
 function statusPills(e: ExpoEvent) {
   const pills = [];
   if (e.is_published) pills.push("published");
@@ -254,7 +243,6 @@ const uploadFieldMap: Record<
   string,
   { target: "event" | "sub"; field: string }
 > = {
-  event_hero_images: { target: "event", field: "hero_images" },
   sub_image: { target: "sub", field: "image" },
   sub_hero_image: { target: "sub", field: "hero_image" },
   sub_photo: { target: "sub", field: "photo" },
@@ -266,6 +254,10 @@ async function extractFile(item: any): Promise<string | null> {
   if (item instanceof File || item instanceof Blob) return toBase64(item);
   if (item.raw instanceof File || item.raw instanceof Blob)
     return toBase64(item.raw);
+  if (item.file instanceof File || item.file instanceof Blob)
+    return toBase64(item.file);
+  if (item.file?.raw instanceof File || item.file?.raw instanceof Blob)
+    return toBase64(item.file.raw);
   if (item.image instanceof File || item.image instanceof Blob)
     return toBase64(item.image);
   if (item.image?.raw instanceof File || item.image?.raw instanceof Blob)
@@ -291,42 +283,10 @@ watch(
 );
 
 function assignBase64(b64: string, target: "event" | "sub", field: string) {
-  if (target === "event" && field === "hero_images") {
-    if (!Array.isArray(eventForm.value[field])) eventForm.value[field] = [];
-    eventForm.value[field].push({ image: b64, isNew: true });
-  } else if (target === "event") {
+  if (target === "event") {
     eventForm.value[field] = b64;
   } else {
     subForm.value[field] = b64;
-  }
-}
-
-function removeHeroImage(index: number) {
-  const images = eventForm.value.hero_images;
-  if (!images || !images[index]) return;
-  if (images[index].isNew) {
-    images.splice(index, 1);
-  } else {
-    images[index].isRemoved = true;
-  }
-}
-
-async function addHeroImageViaApi(year: number, b64: string) {
-  try {
-    await expoEventsApi.addHeroImage(year, { image_base64: b64 });
-    await loadDetail(year);
-  } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : "Failed to add hero image";
-  }
-}
-
-async function removeHeroImageViaApi(year: number, heroId: string) {
-  try {
-    await expoEventsApi.removeHeroImages(year, { ids: [heroId] });
-    await loadDetail(year);
-  } catch (e: unknown) {
-    error.value =
-      e instanceof Error ? e.message : "Failed to remove hero image";
   }
 }
 
@@ -357,7 +317,6 @@ function openNew() {
     venue_address: "",
     venue_lat: "",
     venue_lng: "",
-    hero_images: [] as any[],
     is_active: false,
     is_published: false,
   };
@@ -379,11 +338,6 @@ function openEdit(e: ExpoEvent) {
     venue_address: e.venue_address,
     venue_lat: e.venue_lat ?? "",
     venue_lng: e.venue_lng ?? "",
-    hero_images: (e.hero_images || []).map((h) => ({
-      id: h.id,
-      image: h.image,
-      order: h.order,
-    })),
     is_active: e.is_active,
     is_published: e.is_published,
   };
@@ -438,6 +392,26 @@ async function loadVillageBooths(villageId: string) {
   }
 }
 
+async function loadVillageSchedules(villageId: string) {
+  try {
+    const res = await villageSchedulesApi.list({ village: villageId });
+    villageSchedulesList.value = res?.results || [];
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : "Failed to load village schedules";
+  }
+}
+
+async function loadEventHeroImages(eventId: string) {
+  try {
+    const res = await eventHeroImagesApi.list({ event: eventId });
+    eventHeroImagesList.value = res?.results || [];
+  } catch (e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : "Failed to load event hero images";
+  }
+}
+
 async function loadMetrics(year: number) {
   try {
     const res = await expoEventsApi.metrics(year);
@@ -458,9 +432,6 @@ function buildEventBody(): Record<string, unknown> {
   b.end_date = fromLocal(b.end_date as string);
   b.venue_lat = b.venue_lat ? parseFloat(b.venue_lat as string) : null;
   b.venue_lng = b.venue_lng ? parseFloat(b.venue_lng as string) : null;
-  b.hero_images = (b.hero_images as any[])
-    .filter((h: any) => !h.isRemoved)
-    .map((h: any) => h.image);
   return b;
 }
 
@@ -562,6 +533,10 @@ const subLabels: Record<typeof subKind.value, string> = {
   villageHighlight: "Village Highlight",
   villageBooths: "Village Booths",
   villageBooth: "Village Booth",
+  villageSchedules: "Village Schedules",
+  villageSchedule: "Village Schedule",
+  eventHeroImages: "Event Hero Images",
+  eventHeroImage: "Event Hero Image",
   speaker: "Speaker",
   session: "Session",
   booth: "Booth Application",
@@ -570,11 +545,18 @@ const subLabels: Record<typeof subKind.value, string> = {
 
 const villageHighlightsList = ref<VillageHighlight[]>([]);
 const villageBoothsList = ref<VillageBooth[]>([]);
+const villageSchedulesList = ref<VillageSchedule[]>([]);
+const eventHeroImagesList = ref<HeroImage[]>([]);
 
 async function openSub(kind: typeof subKind.value, item?: unknown) {
   subKind.value = kind;
   subEditingId.value = null;
-  uploadFiles.value = {};
+  uploadFiles.value = {
+    sub_image: [],
+    sub_hero_image: [],
+    sub_photo: [],
+    sub_logo: [],
+  };
   const eventId = selected.value?.id;
 
   function setDefaults(form: Record<string, any>, edit: Record<string, any>) {
@@ -733,6 +715,43 @@ async function openSub(kind: typeof subKind.value, item?: unknown) {
       subEditingId.value = b.id;
       setDefaults(base, { ...b });
     } else setDefaults(base, {});
+  } else if (kind === "villageSchedules") {
+    const v = item as Village;
+    subFormParent.value = v.id;
+    await loadVillageSchedules(v.id);
+    await loadVillageBooths(v.id);
+    setDefaults({}, {});
+  } else if (kind === "villageSchedule") {
+    const base = {
+      village: subFormParent.value,
+      time: "",
+      title: "",
+      presenter: "",
+      booth_or_stage: "",
+      day_number: 1,
+      order: 1,
+    };
+    if (item) {
+      const s = item as VillageSchedule;
+      subEditingId.value = s.id;
+      setDefaults(base, { ...s });
+    } else setDefaults(base, {});
+  } else if (kind === "eventHeroImages") {
+    const e = item as ExpoEvent;
+    subFormParent.value = e.id;
+    await loadEventHeroImages(e.id);
+    setDefaults({}, {});
+  } else if (kind === "eventHeroImage") {
+    const base = {
+      event: subFormParent.value,
+      image: "",
+      order: 1,
+    };
+    if (item) {
+      const h = item as HeroImage;
+      subEditingId.value = h.id;
+      setDefaults(base, { ...h });
+    } else setDefaults(base, {});
   }
 
   subModalOpen.value = true;
@@ -787,6 +806,20 @@ async function saveSub() {
       await loadVillageBooths(subFormParent.value);
       subKind.value = "villageBooths";
       return;
+    } else if (subKind.value === "villageSchedule") {
+      if (subEditingId.value)
+        await villageSchedulesApi.update(subEditingId.value, body);
+      else await villageSchedulesApi.create(body);
+      await loadVillageSchedules(subFormParent.value);
+      subKind.value = "villageSchedules";
+      return;
+    } else if (subKind.value === "eventHeroImage") {
+      if (subEditingId.value)
+        await eventHeroImagesApi.update(subEditingId.value, body);
+      else await eventHeroImagesApi.create(body);
+      await loadEventHeroImages(subFormParent.value);
+      subKind.value = "eventHeroImages";
+      return;
     } else if (subKind.value === "booth") {
       if (subEditingId.value)
         await boothApplicationsApi.update(subEditingId.value, body);
@@ -819,6 +852,14 @@ async function removeSub(kind: typeof subKind.value, id: string) {
     } else if (kind === "villageBooth") {
       await villageBoothsApi.remove(id);
       if (subFormParent.value) await loadVillageBooths(subFormParent.value);
+      return;
+    } else if (kind === "villageSchedule") {
+      await villageSchedulesApi.remove(id);
+      if (subFormParent.value) await loadVillageSchedules(subFormParent.value);
+      return;
+    } else if (kind === "eventHeroImage") {
+      await eventHeroImagesApi.remove(id);
+      if (subFormParent.value) await loadEventHeroImages(subFormParent.value);
       return;
     } else if (kind === "speaker") await speakersApi.remove(id);
     else if (kind === "session")
@@ -1039,32 +1080,6 @@ onMounted(load);
               ><input v-model="eventForm.venue_lng" type="number" step="any" />
             </div>
             <div class="form-field span-2">
-              <label>Hero Images</label>
-              <VaFileUpload
-                v-model="uploadFiles['event_hero_images']"
-                dropzone
-                file-types="image/*"
-                upload-button-text="Add hero image"
-                drop-zone-text="Drop image here or click to add"
-              />
-              <div v-if="heroImagePreviews.length" class="hero-previews">
-                <div
-                  v-for="(img, i) in heroImagePreviews"
-                  :key="i"
-                  class="hero-preview-item"
-                >
-                  <img :src="img.url" class="form-thumb" />
-                  <button
-                    type="button"
-                    class="hero-remove-btn"
-                    @click.prevent="removeHeroImage(i)"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="form-field span-2">
               <label class="check-label"
                 ><input v-model="eventForm.is_active" type="checkbox" />
                 Active</label
@@ -1147,6 +1162,15 @@ onMounted(load);
               :src="resolveMediaUrl(img.image)"
               class="hero-thumb"
             />
+          </div>
+          <div class="tab-toolbar">
+            <button
+              type="button"
+              class="new-btn"
+              @click="openSub('eventHeroImages', selected)"
+            >
+              <VaIcon name="photo_library" size="18px" /> Manage Hero Images
+            </button>
           </div>
         </div>
 
@@ -1292,6 +1316,13 @@ onMounted(load);
                 @click="openSub('villageBooths', rowData)"
               >
                 <VaIcon name="store" size="18px" />
+              </button>
+              <button
+                class="row-action"
+                title="Schedule"
+                @click="openSub('villageSchedules', rowData)"
+              >
+                <VaIcon name="schedule" size="18px" />
               </button>
               <button class="row-action" @click="openSub('village', rowData)">
                 <VaIcon name="edit" size="18px" />
@@ -1500,7 +1531,10 @@ onMounted(load);
           class="modal-card"
           :class="{
             xlarge:
-              subKind === 'villageHighlights' || subKind === 'villageBooths',
+              subKind === 'villageHighlights' ||
+              subKind === 'villageBooths' ||
+              subKind === 'villageSchedules' ||
+              subKind === 'eventHeroImages',
           }"
         >
           <div class="modal-head">
@@ -1510,7 +1544,11 @@ onMounted(load);
                   ? "Village Highlights"
                   : subKind === "villageBooths"
                     ? "Village Booths"
-                    : `${subEditingId ? "Edit" : "Add"} ${subLabels[subKind]}`
+                    : subKind === "villageSchedules"
+                      ? "Village Schedules"
+                      : subKind === "eventHeroImages"
+                        ? "Event Hero Images"
+                        : `${subEditingId ? "Edit" : "Add"} ${subLabels[subKind]}`
               }}
             </h2>
             <button
@@ -1943,6 +1981,139 @@ onMounted(load);
                 <input v-model.number="subForm.order" type="number" />
               </div>
             </template>
+            <template v-else-if="subKind === 'villageSchedules'">
+              <div class="form-field span-2">
+                <button
+                  type="button"
+                  class="new-btn"
+                  @click="openSub('villageSchedule')"
+                >
+                  <VaIcon name="add" size="18px" /> Add Schedule Item
+                </button>
+              </div>
+              <div
+                v-for="s in villageSchedulesList"
+                :key="s.id"
+                class="schedule-row"
+              >
+                <span class="schedule-time">{{ s.time }}</span>
+                <span class="schedule-title">{{ s.title }}</span>
+                <span class="schedule-presenter">{{ s.presenter }}</span>
+                <span class="schedule-stage">{{ s.booth_or_stage }}</span>
+                <span class="schedule-day">Day {{ s.day_number }}</span>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Edit"
+                  @click="openSub('villageSchedule', s)"
+                >
+                  <VaIcon name="edit" size="16px" />
+                </button>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Delete"
+                  @click="removeSub('villageSchedule', s.id)"
+                >
+                  <VaIcon name="delete" size="16px" />
+                </button>
+              </div>
+            </template>
+            <template v-else-if="subKind === 'villageSchedule'">
+              <div class="form-field">
+                <label>Time</label>
+                <input v-model="subForm.time" type="time" />
+              </div>
+              <div class="form-field">
+                <label>Day Number</label>
+                <input v-model.number="subForm.day_number" type="number" />
+              </div>
+              <div class="form-field span-2">
+                <label>Title</label>
+                <input v-model="subForm.title" type="text" />
+              </div>
+              <div class="form-field span-2">
+                <label>Presenter</label>
+                <input v-model="subForm.presenter" type="text" />
+              </div>
+              <div class="form-field">
+                <label>Booth / Stage</label>
+                <select v-model="subForm.booth_or_stage">
+                  <option value="">— Select booth —</option>
+                  <option
+                    v-for="b in villageBoothsList"
+                    :key="b.id"
+                    :value="b.name"
+                  >
+                    {{ b.name }} ({{ b.booth_number }})
+                  </option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
+            <template v-else-if="subKind === 'eventHeroImages'">
+              <div class="form-field span-2">
+                <button
+                  type="button"
+                  class="new-btn"
+                  @click="openSub('eventHeroImage')"
+                >
+                  <VaIcon name="add" size="18px" /> Add Hero Image
+                </button>
+              </div>
+              <div
+                v-for="h in eventHeroImagesList"
+                :key="h.id"
+                class="hero-img-row"
+              >
+                <img
+                  :src="resolveMediaUrl(h.image)"
+                  class="hero-img-thumb"
+                  :alt="`Hero ${h.order}`"
+                />
+                <span class="hero-img-order">{{ h.order }}</span>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Edit"
+                  @click="openSub('eventHeroImage', h)"
+                >
+                  <VaIcon name="edit" size="16px" />
+                </button>
+                <button
+                  type="button"
+                  class="row-action"
+                  title="Delete"
+                  @click="removeSub('eventHeroImage', h.id)"
+                >
+                  <VaIcon name="delete" size="16px" />
+                </button>
+              </div>
+            </template>
+            <template v-else-if="subKind === 'eventHeroImage'">
+              <div class="form-field span-2">
+                <label>Image</label>
+                <img
+                  v-if="subForm.image"
+                  :src="resolveMediaUrl(subForm.image)"
+                  class="form-thumb"
+                />
+                <VaFileUpload
+                  v-model="uploadFiles['sub_image']"
+                  dropzone
+                  file-types="image/*"
+                  upload-button-text="Upload image"
+                  drop-zone-text="Drop image here or click to upload"
+                />
+              </div>
+              <div class="form-field">
+                <label>Order</label>
+                <input v-model.number="subForm.order" type="number" />
+              </div>
+            </template>
             <template v-else>
               <div class="form-field span-2">
                 <label>Name</label><input v-model="subForm.name" type="text" />
@@ -1988,14 +2159,20 @@ onMounted(load);
               @click="subModalOpen = false"
             >
               {{
-                subKind === "villageHighlights" || subKind === "villageBooths"
+                subKind === "villageHighlights" ||
+                subKind === "villageBooths" ||
+                subKind === "villageSchedules" ||
+                subKind === "eventHeroImages"
                   ? "Close"
                   : "Cancel"
               }}
             </button>
             <button
               v-if="
-                subKind !== 'villageHighlights' && subKind !== 'villageBooths'
+                subKind !== 'villageHighlights' &&
+                subKind !== 'villageBooths' &&
+                subKind !== 'villageSchedules' &&
+                subKind !== 'eventHeroImages'
               "
               type="button"
               class="btn-primary"
@@ -2423,6 +2600,63 @@ onMounted(load);
   color: #5b6b82;
 }
 .booth-row .row-action {
+  width: 28px;
+  height: 28px;
+}
+.schedule-row {
+  display: grid;
+  grid-template-columns: 90px 1.5fr 1.2fr 100px 70px 36px 36px;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e6ebf2;
+}
+.form-grid .schedule-row {
+  grid-column: span 2;
+}
+.schedule-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+.schedule-time {
+  font-weight: 600;
+  color: #0a1f44;
+}
+.schedule-presenter,
+.schedule-stage,
+.schedule-day {
+  font-size: 0.75rem;
+  color: #5b6b82;
+}
+.schedule-row .row-action {
+  width: 28px;
+  height: 28px;
+}
+.hero-img-row {
+  display: grid;
+  grid-template-columns: 80px 60px 36px 36px;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e6ebf2;
+}
+.form-grid .hero-img-row {
+  grid-column: span 2;
+}
+.hero-img-thumb {
+  width: 72px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+.hero-img-order {
+  font-size: 0.85rem;
+  color: #5b6b82;
+}
+.hero-img-row .row-action {
   width: 28px;
   height: 28px;
 }

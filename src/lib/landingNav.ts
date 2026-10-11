@@ -23,6 +23,8 @@ export const LANDING_SECTION_ORDER: string[] = [
 export const DEFAULT_LANDING_NAV: NavLink[] = [
   { label: "Home", href: "#home" },
   { label: "Events", href: EVENTS_URL },
+  { label: "Blog", href: "/blog" },
+  { label: "Podcast", href: "/podcast" },
   { label: "Gallery", href: "#gallery" },
   { label: "About", href: "#about" },
   { label: "Values", href: "#values" },

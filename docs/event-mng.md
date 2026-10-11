@@ -26,7 +26,8 @@ Image and file fields use Django `ImageField`/`FileField` — responses return *
 13. [Media Assets](#13-media-assets) — upload, list, update, delete, media library browser
 14. [Dashboard Metrics](#14-dashboard-metrics) — aggregated stats
 15. [Badge Export](#15-badge-export-csv) — CSV download
-16. [Village Highlights](#16-village-highlights) — CRUD
+16. [Event Hero Images](#16-event-hero-images) — CRUD
+17. [Village Highlights](#17-village-highlights) — CRUD
 
 ---
 
@@ -800,9 +801,12 @@ Accepts one or multiple by `id`(s) or `url`/`path`.
 
 ## 7. Village Schedules
 
+Village-specific demo schedules.
+
 | Method   | Path                                                        |
 | -------- | ----------------------------------------------------------- |
 | `GET`    | `/api/admin/village-schedules/?village={uuid}&day_number=1` |
+| `GET`    | `/api/admin/village-schedules/{id}/`                        |
 | `POST`   | `/api/admin/village-schedules/`                             |
 | `PATCH`  | `/api/admin/village-schedules/{id}/`                        |
 | `DELETE` | `/api/admin/village-schedules/{id}/`                        |
@@ -1216,11 +1220,14 @@ Sets `is_confirmed`/`is_approved` to `false` for an existing speaker.
 
 ## 12. Sessions
 
+Event-wide conference sessions (keynotes, panels, workshops, breaks, exhibitions).
+
 ### 12.1 List / Create / Update / Delete
 
 | Method   | Path                                                          |
 | -------- | ------------------------------------------------------------- |
 | `GET`    | `/api/admin/sessions/?event={uuid}&day_number=1&type=KEYNOTE` |
+| `GET`    | `/api/admin/sessions/{id}/`                                   |
 | `POST`   | `/api/admin/sessions/`                                        |
 | `PATCH`  | `/api/admin/sessions/{id}/`                                   |
 | `DELETE` | `/api/admin/sessions/{id}/`                                   |
@@ -1449,9 +1456,56 @@ TZ-DPI-GUE-BB20C79C,John Doe,john@example.com,Test Org,GUEST,QR-TZ-DPI-GUE-BB20C
 
 ---
 
-## 16. Village Highlights
+## 16. Event Hero Images
 
 ### 16.1 List / Create / Update / Delete
+
+| Method   | Path                                         |
+| -------- | -------------------------------------------- |
+| `GET`    | `/api/admin/event-hero-images/?event={uuid}` |
+| `POST`   | `/api/admin/event-hero-images/`              |
+| `GET`    | `/api/admin/event-hero-images/{id}/`         |
+| `PATCH`  | `/api/admin/event-hero-images/{id}/`         |
+| `DELETE` | `/api/admin/event-hero-images/{id}/`         |
+
+**Filter:** `?event={uuid}`
+
+**List response `200`** (paginated)
+
+```json
+{
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "uuid",
+      "image": "http://localhost:8089/media/events/heroes/hero_1.jpg",
+      "order": 1,
+      "created_at": "...",
+      "updated_at": "..."
+    }
+  ]
+}
+```
+
+**Create body**
+
+```json
+{
+  "event": "uuid",
+  "image": "data:image/png;base64,iVBOR...",
+  "order": 1
+}
+```
+
+> **Note:** `image` is an `ImageField` — accepts base64 data URI on create/update, returns absolute file URL in responses. The `event` field is write-only.
+
+---
+
+## 17. Village Highlights
+
+### 17.1 List / Create / Update / Delete
 
 | Method   | Path                                            |
 | -------- | ----------------------------------------------- |
